@@ -1,0 +1,76 @@
+{
+  "name": "project-brain",
+  "version": "0.1.0",
+  "description": "Local-first developer control plane: remembers your projects, machines, deployments and where you left off.",
+  "keywords": [
+    "cli",
+    "developer-tools",
+    "project-management",
+    "claude-code",
+    "mcp",
+    "local-first",
+    "git"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "bin": {
+    "pb": "dist/cli/bin.js",
+    "project-brain": "dist/cli/bin.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "dist-plugin",
+    "schemas",
+    ".claude-plugin",
+    "skills",
+    "hooks",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "scripts/build-plugin.mjs"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/build-plugin.mjs",
+    "clean": "node -e \"const f=require('node:fs');for(const d of ['dist','dist-plugin','coverage'])f.rmSync(d,{recursive:true,force:true})\"",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "prepack": "npm run build",
+    "build:plugin": "node scripts/build-plugin.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "commander": "^15.0.0",
+    "picocolors": "^1.1.1",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "@vitest/coverage-v8": "^5.0.1",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.0.0",
+    "globals": "^17.12.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.0.0",
+    "vitest": "^5.0.1"
+  }
+}

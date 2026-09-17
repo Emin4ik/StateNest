@@ -1,0 +1,18 @@
+{
+  "name": "project-brain",
+  "owner": {
+    "name": "Project Brain contributors",
+    "url": "https://github.com/project-brain/project-brain"
+  },
+  "plugins": [
+    {
+      "name": "project-brain",
+      "description": "Local-first developer control plane: projects, machines, deployments and session checkpoints.",
+      "source": {
+        "source": "npm",
+        "package": "project-brain"
+      }
+    }
+  ],
+  "description": "Project Brain: a local-first developer control plane that remembers your projects, machines, deployments and where you left off."
+}

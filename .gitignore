@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-plugin/
+coverage/
+*.tsbuildinfo
+.DS_Store
+.env
+.env.*
+*.log
+.vitest-temp/
+tests/.tmp/

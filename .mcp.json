@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "brain": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist-plugin/server.js"],
+      "env": {
+        "PROJECT_BRAIN_CLIENT": "claude-code"
+      }
+    }
+  }
+}
