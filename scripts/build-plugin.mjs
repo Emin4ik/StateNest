@@ -68,4 +68,6 @@ const sizes = Object.entries(result.metafile.outputs)
   .map(([file, meta]) => `${file.replace(`${root}/`, '')}  ${(meta.bytes / 1024).toFixed(0)}KB`)
   .sort();
 
-process.stdout.write(`Bundled plugin entry points:\n  ${sizes.join('\n  ')}\n`);
+// stderr, not stdout: `npm pack --json` runs prepack and parses stdout as
+// JSON, so build progress on stdout corrupts it.
+process.stderr.write(`Bundled plugin entry points:\n  ${sizes.join('\n  ')}\n`);

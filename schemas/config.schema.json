@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://project-brain.dev/schemas/v1/config.json",
+  "title": "Project Brain config",
+  "description": "Global configuration.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "default": 1,
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "default_profile": {
+      "default": "personal",
+      "type": "string"
+    },
+    "discovery": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "default": "ask",
+          "type": "string",
+          "enum": [
+            "auto",
+            "ask",
+            "manual"
+          ]
+        },
+        "exclude": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "max_depth": {
+          "default": 8,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        }
+      },
+      "required": [
+        "mode",
+        "exclude",
+        "max_depth"
+      ],
+      "additionalProperties": {}
+    },
+    "checkpoint": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "default": "manual-smart",
+          "type": "string",
+          "enum": [
+            "metadata",
+            "smart",
+            "manual-smart"
+          ]
+        },
+        "min_interval_minutes": {
+          "default": 30,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "mode",
+        "min_interval_minutes"
+      ],
+      "additionalProperties": {}
+    },
+    "dashboard": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "default": "127.0.0.1",
+          "type": "string"
+        },
+        "port": {
+          "default": 7777,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      },
+      "required": [
+        "host",
+        "port"
+      ],
+      "additionalProperties": {}
+    },
+    "log": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "default": "info",
+          "type": "string",
+          "enum": [
+            "error",
+            "warn",
+            "info",
+            "debug"
+          ]
+        },
+        "max_size_kb": {
+          "default": 2048,
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "level",
+        "max_size_kb"
+      ],
+      "additionalProperties": {}
+    },
+    "telemetry": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "default": false,
+          "type": "boolean",
+          "const": false
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "additionalProperties": {}
+    }
+  },
+  "required": [
+    "schema_version",
+    "default_profile",
+    "discovery",
+    "checkpoint",
+    "dashboard",
+    "log",
+    "telemetry"
+  ],
+  "additionalProperties": {}
+}

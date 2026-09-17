@@ -24,3 +24,21 @@ Migrations are provided and are never destructive: see `docs/data-model.md`.
 - Claude Code plugin: SessionStart brief, Stop tracking, PreCompact/PostCompact
   checkpointing, SessionEnd checkpointing, seven skills and ten MCP tools
 - `pb doctor`, with an actionable fix for every failing check
+- Optional sync of one profile to a private git repository, with a blocking
+  secret audit before any commit and non-destructive conflict handling
+- Local read-only dashboard, loopback-only by default
+- `pb export` / `pb import` backups, excluding machine-local state
+- `pb uninstall`, which keeps your data unless you explicitly say otherwise
+- Published JSON Schemas for every stored record
+
+### Fixed
+
+- A directory reached through a symlink (macOS `/tmp` -> `/private/tmp`) was
+  registered as a second location on the same machine, so `pb resume` showed a
+  project as if it existed on two computers
+- `.mcp.json` was missing from the published package, so an npm install
+  produced a plugin with working hooks and skills but no MCP tools
+- A TOML manifest's `[project]` table was parsed past its own boundary because
+  the pattern used `\Z`, a Perl anchor with no JavaScript equivalent
+- A password embedded in an scp-style git remote could reach the derived
+  project identity

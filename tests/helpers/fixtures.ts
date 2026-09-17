@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
@@ -19,7 +19,11 @@ export interface TempDir {
 }
 
 export async function makeTempDir(prefix = 'project-brain-test-'): Promise<TempDir> {
-  const path = await mkdtemp(join(tmpdir(), prefix));
+  // `realpath` because the system temp directory is itself a symlink on macOS
+  // (`/var` -> `/private/var`). Project Brain resolves paths before recording
+  // them, so a test comparing against the unresolved form would fail for a
+  // reason that has nothing to do with what it is testing.
+  const path = await realpath(await mkdtemp(join(tmpdir(), prefix)));
   return {
     path,
     cleanup: async () => {

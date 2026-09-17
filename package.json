@@ -33,6 +33,7 @@
     "dist-plugin",
     "schemas",
     ".claude-plugin",
+    ".mcp.json",
     "skills",
     "hooks",
     "README.md",
@@ -53,7 +54,10 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "prepack": "npm run build",
-    "build:plugin": "node scripts/build-plugin.mjs"
+    "build:plugin": "node scripts/build-plugin.mjs",
+    "check:bytes": "node scripts/check-source-bytes.mjs",
+    "verify": "npm run typecheck && npm run lint && npm run check:bytes && npm test && npm run build",
+    "schemas": "node scripts/generate-schemas.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

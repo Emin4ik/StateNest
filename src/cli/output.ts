@@ -224,7 +224,7 @@ export function truncate(text: string, maxLength: number): string {
 /** Length ignoring ANSI escapes, so colored cells still align. */
 function visibleLength(text: string): number {
   // eslint-disable-next-line no-control-regex
-  return text.replace(/\[[0-9;]*m/g, '').length;
+  return text.replace(/\u001b\[[0-9;]*m/g, '').length;
 }
 
 function findLastIndex<T>(items: readonly T[], predicate: (item: T) => boolean): number {

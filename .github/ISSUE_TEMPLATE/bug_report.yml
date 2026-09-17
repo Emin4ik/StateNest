@@ -1,0 +1,53 @@
+name: Bug report
+description: Something does not work the way it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Please do not paste real credentials, tokens or server addresses.**
+        If a report needs one, describe its shape instead — for example
+        "a GitHub token, `ghp_` plus 36 characters".
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what actually happened.
+      placeholder: |
+        I ran `pb resume taxi` and ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `pb doctor`
+      description: This covers most of what we would otherwise have to ask for.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Project Brain version
+      description: From `pb --version`.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [macOS, Linux, Windows, WSL, Other]
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: data-impact
+    attributes:
+      label: Does this involve data?
+      options:
+        - label: Something was lost, corrupted, or written where it should not have been
+        - label: Something was stored that Project Brain says it never stores

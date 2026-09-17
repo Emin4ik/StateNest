@@ -8,7 +8,7 @@ import {
 } from './schema.js';
 import { deterministicId, randomId } from '../util/ids.js';
 import { now, type Timestamp } from '../util/time.js';
-import { pathKey } from '../util/paths.js';
+import { pathKey, resolveRealPath } from '../util/paths.js';
 import { findRepoRoot, readRepoFast, type FastRepoInfo } from '../git/repo.js';
 import { detectProjectMetadata, suggestProjectName } from '../discovery/detect.js';
 import { resolveProject, type Resolution } from './resolve.js';
@@ -94,7 +94,7 @@ export class Registry {
 
   /** The project registered at this path on this machine, if any. */
   async byLocation(path: string, machineId: string): Promise<Project | null> {
-    const key = pathKey(path);
+    const key = pathKey(await resolveRealPath(path));
     const projects = await this.all();
     return (
       projects.find((project) =>
@@ -162,9 +162,10 @@ export class Registry {
     }
 
     // A linked worktree is another view of the same project, so match on the
-    // main working tree's path as well as this one's.
-    const searchPaths = [repoRoot ?? directory];
-    if (repo?.worktreeOf) searchPaths.push(repo.worktreeOf);
+    // main working tree's path as well as this one's. Paths are resolved
+    // through symlinks first, so `/tmp/x` and `/private/tmp/x` are one place.
+    const searchPaths = [await resolveRealPath(repoRoot ?? directory)];
+    if (repo?.worktreeOf) searchPaths.push(await resolveRealPath(repo.worktreeOf));
 
     for (const path of searchPaths) {
       const byPath = await this.byLocation(path, machineId);
@@ -183,7 +184,9 @@ export class Registry {
    */
   async register(directory: string, options: RegisterOptions): Promise<RegisterResult> {
     const { project: existing, repo, repoRoot } = await this.identify(directory, options.machineId);
-    const root = repoRoot ?? directory;
+    // Store the resolved path, so the same directory reached through a symlink
+    // is recognised as the location it already is.
+    const root = await resolveRealPath(repoRoot ?? directory);
     const timestamp = now();
 
     if (existing) {
@@ -258,7 +261,8 @@ export class Registry {
     const project = await this.byId(projectId);
     if (!project) return null;
     const timestamp = now();
-    const updated = upsertLocation(project, buildLocation(path, repo, machineId, timestamp));
+    const resolved = await resolveRealPath(path);
+    const updated = upsertLocation(project, buildLocation(resolved, repo, machineId, timestamp));
     return this.save({ ...updated, last_activity_at: timestamp });
   }
 }

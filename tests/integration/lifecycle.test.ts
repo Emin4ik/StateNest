@@ -423,3 +423,64 @@ describe('project lifecycle', () => {
     });
   });
 });
+
+/**
+ * Symlinked paths.
+ *
+ * Found in real use: on macOS `/tmp` is a symlink to `/private/tmp`, so the CLI
+ * invoked from one and a Claude Code hook invoked from the other registered the
+ * same working tree twice on the same machine. `pb resume` then showed the
+ * project as if it existed on two computers.
+ */
+describe('a directory reached through a symlink is one location', () => {
+  let home: TempDir;
+  let code: TempDir;
+
+  beforeEach(async () => {
+    home = await makeTempDir('pb-link-home-');
+    code = await makeTempDir('pb-link-code-');
+  });
+
+  afterEach(async () => {
+    await home.cleanup();
+    await code.cleanup();
+  });
+
+  it('does not create a second location for the same directory', async () => {
+    const { symlink } = await import('node:fs/promises');
+    const workspace = await Workspace.initialize({ home: home.path });
+    const registry = new Registry(workspace.store);
+
+    const real = join(code.path, 'real', 'widget');
+    await makeFakeRepo(real, { remote: 'git@github.com:acme/widget.git' });
+
+    const linked = join(code.path, 'linked');
+    await symlink(join(code.path, 'real'), linked, 'dir');
+
+    const first = await registry.register(real, { machineId: workspace.machineId });
+    const second = await registry.register(join(linked, 'widget'), {
+      machineId: workspace.machineId,
+    });
+
+    expect(second.outcome).toBe('location-updated');
+    expect(second.project.id).toBe(first.project.id);
+    expect(second.project.local_locations).toHaveLength(1);
+  });
+
+  it('identifies a project through a symlinked path', async () => {
+    const { symlink } = await import('node:fs/promises');
+    const workspace = await Workspace.initialize({ home: home.path });
+    const registry = new Registry(workspace.store);
+
+    // A repository with no remote, so identification must fall back to path.
+    const real = join(code.path, 'real', 'scratch');
+    await makeFakeRepo(real, {});
+    await registry.register(real, { machineId: workspace.machineId });
+
+    const linked = join(code.path, 'via-link');
+    await symlink(join(code.path, 'real'), linked, 'dir');
+
+    const found = await registry.identify(join(linked, 'scratch'), workspace.machineId);
+    expect(found.project?.name).toBe('scratch');
+  });
+});

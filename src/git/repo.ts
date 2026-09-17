@@ -405,7 +405,7 @@ export function parsePorcelainStatus(stdout: string, limit: number): StatusCount
 function parseLogLine(stdout: string): CommitInfo | null {
   const line = stdout.trim();
   if (line === '') return null;
-  const [sha, epoch, authorName, subject] = line.split('');
+  const [sha, epoch, authorName, subject] = line.split('\u001f');
   if (!sha || !epoch) return null;
   const seconds = Number.parseInt(epoch, 10);
   if (!Number.isFinite(seconds)) return null;

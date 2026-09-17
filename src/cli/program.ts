@@ -20,6 +20,10 @@ import { deployCommand, remoteCommand } from './commands/remote.js';
 import { doctorCommand } from './commands/doctor.js';
 import { privacyCommand } from './commands/privacy.js';
 import { integrateCommand } from './commands/integrate.js';
+import { syncCommand } from './commands/sync.js';
+import { dashboardCommand } from './commands/dashboard.js';
+import { exportCommand, importCommand } from './commands/export.js';
+import { uninstallCommand } from './commands/uninstall.js';
 
 /**
  * The `pb` command tree.
@@ -94,6 +98,13 @@ export function buildProgram(version: string): Command {
   // Setup and safety
   program.addCommand(integrateCommand());
   program.addCommand(privacyCommand());
+  program.addCommand(syncCommand());
+  program.addCommand(dashboardCommand());
+
+  // Backup and removal
+  program.addCommand(exportCommand());
+  program.addCommand(importCommand());
+  program.addCommand(uninstallCommand());
 
   program.addHelpText(
     'after',
