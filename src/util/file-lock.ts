@@ -73,16 +73,20 @@ async function acquire(lockPath: string, timeoutMs: number, staleMs: number): Pr
       }
       return true;
     } catch (error) {
-      if (errnoCode(error) !== 'EEXIST') return false;
+      const code = errnoCode(error);
+      // EEXIST is the normal "someone else holds it". Windows also reports
+      // EPERM or EBUSY when the file is being replaced at that instant, which
+      // is contention too - treating it as a hard failure would silently drop
+      // the update the lock exists to protect.
+      if (code !== 'EEXIST' && code !== 'EPERM' && code !== 'EBUSY') return false;
 
-      if (await isStale(lockPath, staleMs)) {
+      if (code === 'EEXIST' && (await isStale(lockPath, staleMs))) {
         await rm(lockPath, { force: true }).catch(() => {});
         continue;
       }
 
       if (Date.now() >= deadline) return false;
-      // Back off, but stay well inside the hook deadline.
-      await delay(Math.min(5 * 2 ** Math.min(attempt, 5), 100));
+      await delay(backoffMs(attempt));
     }
   }
 }
@@ -109,6 +113,24 @@ async function isStale(lockPath: string, staleMs: number): Promise<boolean> {
     // Vanished between the EEXIST and the stat: the holder released it.
     return true;
   }
+}
+
+/**
+ * Exponential backoff with jitter.
+ *
+ * The jitter is the important half. Without it every waiter sleeps for exactly
+ * the same interval, wakes together, and collides again — so under real
+ * contention one unlucky waiter can lose every race until the deadline and
+ * then proceed without the lock, which is precisely the lost update this
+ * module exists to prevent. It showed up as 9 of 10 concurrent Stop events
+ * being recorded on a loaded CI runner, and never on an idle laptop.
+ *
+ * Capped well inside the hook deadline: waiting is cheaper than a lost
+ * increment, but not at the cost of delaying somebody's session.
+ */
+function backoffMs(attempt: number): number {
+  const base = Math.min(5 * 2 ** Math.min(attempt, 5), 80);
+  return base + Math.random() * base;
 }
 
 function delay(ms: number): Promise<void> {

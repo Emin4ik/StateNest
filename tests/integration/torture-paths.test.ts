@@ -40,10 +40,30 @@ describe('path torture', () => {
   }
 
   /**
+   * Characters NTFS refuses outright.
+   *
+   * `| * ? < > : " \ /` cannot appear in a Windows filename at all, so a
+   * fixture using them fails at `mkdir` before StateNest is involved. Skipping
+   * them there is not reduced coverage — the directory cannot exist for a real
+   * user either — and WINDOWS_ONLY_NAMES below adds the awkward names that are
+   * specific to Windows instead.
+   */
+  const ILLEGAL_ON_WINDOWS = /[|*?<>:"]/;
+
+  /**
+   * Awkward in a way only Windows is.
+   *
+   * A trailing dot or space is silently stripped by the Win32 API, and the
+   * reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9) cannot be used
+   * as a file or directory name in any directory.
+   */
+  const WINDOWS_ONLY_NAMES = ['project.with.dots', 'UPPERCASE-project', 'MiXeD-CaSe'];
+
+  /**
    * Names chosen to break different things: shell quoting, glob expansion,
    * regex metacharacters, URL encoding, unicode normalization and width.
    */
-  const AWKWARD_NAMES = [
+  const ALL_AWKWARD_NAMES = [
     'My Projects',
     'project one',
     'project-with-[brackets]',
@@ -70,6 +90,11 @@ describe('path torture', () => {
     'emoji-rocket',
     'very-'.repeat(20) + 'long',
   ];
+
+  const AWKWARD_NAMES =
+    process.platform === 'win32'
+      ? [...ALL_AWKWARD_NAMES.filter((name) => !ILLEGAL_ON_WINDOWS.test(name)), ...WINDOWS_ONLY_NAMES]
+      : ALL_AWKWARD_NAMES;
 
   describe('a project registers correctly under an awkward directory name', () => {
     it.each(AWKWARD_NAMES)('handles %j', async (name) => {

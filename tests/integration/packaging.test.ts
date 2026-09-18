@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
-import { cp, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { cp, mkdtemp, readFile } from 'node:fs/promises';
+import { removeTree } from '../helpers/fixtures.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -9,6 +10,15 @@ import { CLI_COMMAND, PACKAGE_NAME } from '../../src/core/metadata.js';
 
 const execFileAsync = promisify(execFile);
 const ROOT = join(import.meta.dirname, '..', '..');
+
+/**
+ * On Windows the npm CLI is `npm.cmd`.
+ *
+ * `execFile` resolves an exact filename and does not try PATHEXT, so plain
+ * `npm` fails with ENOENT there. Naming the file beats passing `shell: true`,
+ * which would join argv into one string without quoting.
+ */
+const NPM = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 /**
  * Every test here spawns a process — `npm pack`, or node running a bundle.
@@ -56,7 +66,7 @@ function packedFiles(): Promise<string[]> {
   // full rebuild inside every assertion is slow and makes the listing depend
   // on build output reaching stdout.
   packedFilesPromise ??= execFileAsync(
-    'npm',
+    NPM,
     ['pack', '--dry-run', '--json', '--ignore-scripts'],
     { cwd: ROOT, maxBuffer: 32 * 1024 * 1024 },
   ).then(({ stdout }) => {
@@ -81,7 +91,7 @@ beforeAll(async () => {
   if (built.every((file) => existsSync(join(ROOT, file)))) return;
 
   process.stdout.write('  (no build found — running `npm run build` first)\n');
-  await execFileAsync('npm', ['run', 'build'], {
+  await execFileAsync(NPM, ['run', 'build'], {
     cwd: ROOT,
     maxBuffer: 64 * 1024 * 1024,
     shell: process.platform === 'win32',
@@ -185,9 +195,11 @@ describe('the plugin entry points are self-contained', () => {
    * thing is the only check that cannot be fooled by its own source.
    */
   async function isolatedPluginDir(): Promise<{ dir: string; cleanup: () => Promise<void> }> {
-    const dir = await mkdtemp(join(tmpdir(), 'pb-isolated-plugin-'));
+    const dir = await mkdtemp(join(tmpdir(), 'statenest-isolated-plugin-'));
     await cp(join(ROOT, 'dist-plugin'), join(dir, 'dist-plugin'), { recursive: true });
-    return { dir, cleanup: () => rm(dir, { recursive: true, force: true }) };
+    // removeTree retries EBUSY: Windows will not unlink a file a just-killed
+    // child process still has open, and reported it as a packaging failure.
+    return { dir, cleanup: () => removeTree(dir) };
   }
 
   it('the hook runs with no dependencies resolvable', async () => {
@@ -209,15 +221,16 @@ describe('the plugin entry points are self-contained', () => {
 
   it('the MCP server starts with no dependencies resolvable', async () => {
     const { dir, cleanup } = await isolatedPluginDir();
+    let child: ReturnType<typeof spawn> | null = null;
     try {
-      const child = spawn('node', [join(dir, 'dist-plugin', 'server.js')], {
+      child = spawn('node', [join(dir, 'dist-plugin', 'server.js')], {
         cwd: dir,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
 
       let stderr = '';
       let exited: number | null = null;
-      child.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()));
+      child.stderr?.on('data', (chunk: Buffer) => (stderr += chunk.toString()));
       child.on('exit', (code) => (exited = code));
 
       // A stdio MCP server stays alive waiting on stdin. A bundling failure
@@ -230,6 +243,14 @@ describe('the plugin entry points are self-contained', () => {
       expect(stderr).not.toContain('Cannot find package');
       expect(stillRunning, `server exited with ${exited}: ${stderr}`).toBe(true);
     } finally {
+      // Let the child die before deleting the files it has mapped, or Windows
+      // refuses the unlink outright.
+      if (child && child.exitCode === null) {
+        await new Promise((resolve) => {
+          child!.once('exit', resolve);
+          setTimeout(resolve, 5_000);
+        });
+      }
       await cleanup();
     }
   }, PROCESS_TIMEOUT);
