@@ -74,6 +74,18 @@ async function acquire(lockPath: string, timeoutMs: number, staleMs: number): Pr
       return true;
     } catch (error) {
       const code = errnoCode(error);
+
+      // The lock directory was not there. That happens on the first write of a
+      // session, and whenever something has just swept the cache directory.
+      // Giving up here means running *unlocked*, which is the lost update this
+      // module exists to prevent - so recreate the directory and try again
+      // rather than treating a missing parent as unrecoverable.
+      if (code === 'ENOENT') {
+        if (Date.now() >= deadline) return false;
+        await mkdir(dirname(lockPath), { recursive: true }).catch(() => {});
+        continue;
+      }
+
       // EEXIST is the normal "someone else holds it". Windows also reports
       // EPERM or EBUSY when the file is being replaced at that instant, which
       // is contention too - treating it as a hard failure would silently drop
