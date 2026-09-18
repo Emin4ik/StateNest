@@ -17,7 +17,12 @@ const PROJECTS: Project[] = [
   project({ name: 'scada-platform' }),
   project({
     name: 'payment-api',
-    repository: { identity: 'github.com/acme/payment-api', name: 'payment-api', path: 'acme/payment-api' },
+    repository: {
+      identity: 'github.com/acme/payment-api',
+      name: 'payment-api',
+      path: 'acme/payment-api',
+      previous_identities: [],
+    },
   }),
   project({ name: 'internal-api' }),
   project({ name: 'old-api' }),

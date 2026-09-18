@@ -1,8 +1,24 @@
 # Claude Code integration: what we verified
 
-Researched 2026-09-17 against the official documentation and Claude Code
-**v2.1.273** installed locally. Findings marked *observed* were measured on a
-real installation, not read in a document.
+Researched 2026-09-17 and **re-verified 2026-09-18** against the official
+documentation and Claude Code **v2.1.273** installed locally. Findings marked
+*observed* were measured on a real installation, not read in a document.
+
+**Re-verification result (2026-09-18):** all eight shipped integration
+assumptions below - plugin manifest layout, hooks config shape, SessionStart
+output, the SessionEnd budget, PostCompact, plugin MCP registration, skill
+format, and the installation path - were re-checked against the current docs
+and confirmed. Two areas produced claimed drift; both were then refuted on
+adversarial re-check, in each case because the claim was inferred from a doc
+sentence without reading the shipped handler that already accounts for it. No
+code or configuration changed as a result.
+
+> **Method note, learned the hard way.** A *summarised* fetch of `hooks.md`
+> returned the exact opposite of the truth on whether SessionStart can block
+> (claiming "Yes | Blocks session start" where the real table row reads
+> "No | Shows stderr to user only"). Always pull the raw markdown by appending
+> `.md` to a docs URL and read the table directly. A summariser is not a source
+> for a schema.
 
 This file records only what **changes the implementation**. It is not a mirror
 of the Claude Code docs; read those for anything not decided here.
@@ -20,7 +36,7 @@ design, so each is enforced in code and named here so it is not rediscovered.
 
 | Constraint | Value | Where it is enforced |
 | --- | --- | --- |
-| A plugin's `SessionEnd` hook is killed at **~1.5s**, and the plugin's own `timeout` field **cannot raise it** | 1.5s | `DEADLINES['session-end'] = 1200` in `src/integrations/claude/hook.ts` |
+| A plugin's `SessionEnd` hook is killed at **~1.5s**, and the plugin's own `timeout` field **cannot raise it** | 1.5s | `DEADLINES['session-end'] = 1200` in `src/integrations/claude/handlers.ts` |
 | Every hook output string is truncated at **10,000 characters** | 10,000 | `HOOK_OUTPUT_LIMIT` in `src/integrations/claude/protocol.ts` |
 | `SessionStart` delays the model's first response roughly 1:1 | — | Session brief capped at 4,000 chars; no git process is spawned on this path |
 | Session-lifecycle hooks **cannot invoke an LLM** — `prompt` and `agent` hook types are unsupported on SessionStart/SessionEnd/PreCompact | — | Default checkpoint mode is `manual-smart`; see ADR 0005 |

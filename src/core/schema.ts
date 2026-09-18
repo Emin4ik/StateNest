@@ -134,6 +134,16 @@ export const RepositorySchema = z.looseObject({
   name: z.string().optional(),
   web_url: z.string().nullable().optional(),
   default_branch: z.string().optional(),
+  /**
+   * Identities this repository was previously known by, oldest first.
+   *
+   * Written when a remote changes under an already-recorded project - a
+   * repository transferred to a new owner, or moved to a different host. The
+   * project keeps its id so its history survives, and the old identity is kept
+   * so `pb doctor` can explain a duplicate that arrives through sync from a
+   * machine that only ever saw one of the two.
+   */
+  previous_identities: z.array(z.string()).default([]),
 });
 
 export const ProjectLocationSchema = z.looseObject({

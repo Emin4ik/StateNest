@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { readFileOrNull, writeFileAtomic } from '../../util/fs-atomic.js';
@@ -29,6 +30,15 @@ export const SessionRecordSchema = z.looseObject({
   start_changed_files: z.number().int().nonnegative().nullable().default(null),
   /** True once a checkpoint has been written for this session. */
   checkpointed: z.boolean().default(false),
+  /**
+   * Digest of the last compaction summary recorded for this session.
+   *
+   * Claude Code can deliver the same hook more than once. Two *different*
+   * compactions in one session should each produce a checkpoint, so the guard
+   * cannot simply be "already checkpointed" - it has to be the identity of the
+   * compaction itself.
+   */
+  last_compact_digest: z.string().nullable().default(null),
   /** Set by PreCompact so PostCompact can attach its summary to real state. */
   pending_compact: z
     .looseObject({
@@ -42,6 +52,11 @@ export const SessionRecordSchema = z.looseObject({
 });
 
 export type SessionRecord = z.infer<typeof SessionRecordSchema>;
+
+/** Stable digest of a compaction summary, used only for duplicate detection. */
+export function compactDigest(summary: string): string {
+  return createHash('sha256').update(summary).digest('hex').slice(0, 16);
+}
 
 export function sessionFilePath(paths: BrainPaths, sessionId: string): string {
   return join(paths.cacheDir, 'sessions', `${sanitizeIdForPath(sessionId)}.json`);
@@ -71,6 +86,31 @@ export async function writeSessionRecord(
     sessionFilePath(paths, record.session_id),
     `${JSON.stringify(record, null, 2)}\n`,
   );
+}
+
+/**
+ * Read, change and write a session record while holding its lock.
+ *
+ * Several hook processes touch the same record concurrently - a trailing async
+ * Stop overlapping a SessionEnd is entirely normal. Without serialisation each
+ * reads the same starting value and the last writer wins, which loses turn
+ * counts and, worse, can reset the flag that stops a session being
+ * checkpointed twice.
+ */
+export async function updateSessionRecord(
+  paths: BrainPaths,
+  sessionId: string,
+  cwd: string,
+  change: (record: SessionRecord) => SessionRecord | Promise<SessionRecord>,
+): Promise<SessionRecord> {
+  const { withFileLock } = await import('../../util/file-lock.js');
+
+  return withFileLock(sessionFilePath(paths, sessionId), async () => {
+    const existing = (await readSessionRecord(paths, sessionId)) ?? newSessionRecord(sessionId, cwd);
+    const updated = await change(existing);
+    await writeSessionRecord(paths, updated);
+    return updated;
+  });
 }
 
 export function newSessionRecord(

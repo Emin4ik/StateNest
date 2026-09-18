@@ -56,7 +56,21 @@ export interface RegisterResult {
   /** What actually happened, so the CLI can say so honestly. */
   outcome: 'created' | 'location-added' | 'location-updated';
   repo: FastRepoInfo | null;
+  /** Set when the project's repository identity appeared or changed. */
+  identityChange?: IdentityChange;
 }
+
+/**
+ * How a project's repository identity changed during registration.
+ *
+ * - `gained-remote`: the project had no remote and now has one. Safe to adopt
+ *   the derived id, because no other machine can have known it by an identity.
+ * - `remote-changed`: the repository moved - transferred to a new owner, or to
+ *   a different host. The id is deliberately NOT changed: another machine may
+ *   already know this project, and silently re-identifying it would either
+ *   duplicate it or merge it with something unrelated.
+ */
+export type IdentityChange = 'gained-remote' | 'remote-changed' | null;
 
 /**
  * The project registry for one profile.
@@ -89,7 +103,60 @@ export class Registry {
 
   async byRepositoryIdentity(identity: string): Promise<Project | null> {
     const projects = await this.all();
-    return projects.find((project) => project.repository?.identity === identity) ?? null;
+    const current = projects.find((project) => project.repository?.identity === identity);
+    if (current) return current;
+
+    // A repository that was transferred keeps its old identity on record, so a
+    // machine that still has the old remote configured continues to resolve to
+    // the same project rather than registering a second one.
+    return (
+      projects.find((project) => project.repository?.previous_identities?.includes(identity)) ??
+      null
+    );
+  }
+
+  /**
+   * Give a project the id its remote implies, moving its data with it.
+   *
+   * Only called when a project that had no remote has just gained one. The
+   * move is attempted in the order that fails safe: if anything goes wrong the
+   * project keeps its current id and its recorded repository, which is still
+   * correct - just not automatically mergeable with the same repository on
+   * another machine, which `pb doctor` will then point out.
+   */
+  private async adoptDerivedId(project: Project, repo: FastRepoInfo): Promise<Project> {
+    const derived = deriveProjectId(repo);
+    if (derived === project.id) return project;
+
+    // Never collide with a project that already exists under that id.
+    if (await this.store.getProject(derived)) return project;
+
+    try {
+      const { rename } = await import('node:fs/promises');
+      const { pathExists } = await import('../util/fs-atomic.js');
+
+      // Checkpoints first: they are the irreplaceable part, and moving them
+      // before the registry entry means a failure leaves the old id intact
+      // and still pointing at them.
+      const oldCheckpoints = this.store.paths.checkpointDir(project.id);
+      if (await pathExists(oldCheckpoints)) {
+        await rename(oldCheckpoints, this.store.paths.checkpointDir(derived));
+      }
+
+      const oldProjectDir = this.store.paths.projectDir(project.id);
+      if (await pathExists(oldProjectDir)) {
+        await rename(oldProjectDir, this.store.paths.projectDir(derived));
+      }
+
+      const renamed = await this.save({ ...project, id: derived });
+      this.cache = (this.cache ?? []).filter((entry) => entry.id !== project.id);
+      if (!this.cache.some((entry) => entry.id === derived)) this.cache.push(renamed);
+      return renamed;
+    } catch {
+      // Keep the existing id. Nothing has been lost; the project simply will
+      // not merge automatically across machines.
+      return project;
+    }
   }
 
   /** The project registered at this path on this machine, if any. */
@@ -190,13 +257,31 @@ export class Registry {
     const timestamp = now();
 
     if (existing) {
-      const updated = upsertLocation(existing, buildLocation(root, repo, options.machineId, timestamp));
+      const withLocation = upsertLocation(
+        existing,
+        buildLocation(root, repo, options.machineId, timestamp),
+      );
       const outcome =
-        updated.local_locations.length === existing.local_locations.length
+        withLocation.local_locations.length === existing.local_locations.length
           ? 'location-updated'
           : 'location-added';
-      const saved = await this.save({ ...updated, last_activity_at: mostRecent(existing.last_activity_at, repo?.lastRefActivityAt) });
-      return { project: saved, outcome, repo };
+
+      const reconciled = reconcileRepository(withLocation, repo, timestamp);
+      const saved = await this.save({
+        ...reconciled.project,
+        last_activity_at: mostRecent(existing.last_activity_at, repo?.lastRefActivityAt),
+      });
+
+      // A project that had no remote and now has one can safely take the id
+      // that remote implies: nothing else has ever known it by an identity, so
+      // adopting one loses no references and makes it merge correctly with the
+      // same repository cloned on another machine.
+      if (reconciled.change === 'gained-remote' && repo) {
+        const adopted = await this.adoptDerivedId(saved, repo);
+        return { project: adopted, outcome, repo, identityChange: reconciled.change };
+      }
+
+      return { project: saved, outcome, repo, identityChange: reconciled.change };
     }
 
     const detected = options.skipDetection
@@ -217,6 +302,7 @@ export class Registry {
       last_activity_at: repo?.lastRefActivityAt ?? timestamp,
       repository: repo?.primaryRemote
         ? {
+            previous_identities: [],
             identity: repo.primaryRemote.identity,
             url: repo.primaryRemote.sanitized,
             host: repo.primaryRemote.host,
@@ -265,6 +351,76 @@ export class Registry {
     const updated = upsertLocation(project, buildLocation(resolved, repo, machineId, timestamp));
     return this.save({ ...updated, last_activity_at: timestamp });
   }
+}
+
+/**
+ * Bring a project's recorded repository into line with what is on disk.
+ *
+ * Two cases, treated very differently.
+ *
+ * A project with **no repository recorded** that now has a remote simply gains
+ * one. This is the ordinary lifecycle - start something locally, push it to
+ * GitHub later - and it was previously dropped entirely, leaving the project
+ * permanently unable to link to the same repository on another machine.
+ *
+ * A project whose **remote has changed** is a transfer or a move. The new
+ * identity is recorded and the old one is kept, but the project id is left
+ * alone: guessing that two identities are the same project is exactly the kind
+ * of silent merge that loses history.
+ */
+export function reconcileRepository(
+  project: Project,
+  repo: FastRepoInfo | null,
+  timestamp: Timestamp,
+): { project: Project; change: IdentityChange } {
+  const remote = repo?.primaryRemote;
+  if (!remote || !remote.stableAcrossMachines) return { project, change: null };
+
+  const repository = {
+    previous_identities: project.repository?.previous_identities ?? [],
+    identity: remote.identity,
+    url: remote.sanitized,
+    host: remote.host,
+    path: remote.path,
+    owner: remote.owner,
+    name: remote.name,
+    web_url: remote.webUrl,
+    ...(project.repository?.default_branch
+      ? { default_branch: project.repository.default_branch }
+      : repo.branch
+        ? { default_branch: repo.branch }
+        : {}),
+  };
+
+  if (!project.repository) {
+    return {
+      project: { ...project, repository, discovered_at: project.discovered_at || timestamp },
+      change: 'gained-remote',
+    };
+  }
+
+  if (project.repository.identity === remote.identity) {
+    // Same repository; refresh the derived fields in case normalization or the
+    // URL form improved, but report no change.
+    return {
+      project: {
+        ...project,
+        repository: { ...project.repository, ...repository },
+      },
+      change: null,
+    };
+  }
+
+  const previous = new Set(project.repository.previous_identities ?? []);
+  previous.add(project.repository.identity);
+
+  return {
+    project: {
+      ...project,
+      repository: { ...repository, previous_identities: [...previous] },
+    },
+    change: 'remote-changed',
+  };
 }
 
 function buildLocation(
