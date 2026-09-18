@@ -15,6 +15,8 @@ import {
   findPluginDir,
   isClaudeCodeInstalled,
   isPluginEnabled,
+  installedPluginVersion,
+  bundledPluginVersion,
 } from '../../integrations/claude/install.js';
 import { SCHEMA_VERSION } from '../../core/schema.js';
 import { fileURLToPath } from 'node:url';
@@ -313,6 +315,32 @@ async function claudeChecks(pluginDir: string | null): Promise<Check[]> {
     detail: enabled ? 'enabled in Claude Code' : 'not installed in Claude Code',
     ...(enabled ? {} : { fix: 'statenest integrate claude' }),
   });
+
+  // Claude Code installs a *copy* of the plugin, so upgrading the npm package
+  // does not update it. A stale copy is self-consistent - its hooks, MCP server
+  // and skills all moved together - so nothing breaks; it simply keeps running
+  // the old version silently, which is exactly the kind of thing doctor exists
+  // to notice.
+  if (enabled) {
+    const [installedVersion, bundledVersion] = await Promise.all([
+      installedPluginVersion(),
+      bundledPluginVersion(pluginDir),
+    ]);
+    if (installedVersion && bundledVersion && installedVersion !== bundledVersion) {
+      checks.push({
+        name: 'Plugin version',
+        level: 'warn',
+        detail: `Claude Code is running ${installedVersion}; this StateNest is ${bundledVersion}`,
+        fix: 'statenest integrate claude',
+      });
+    } else if (installedVersion) {
+      checks.push({
+        name: 'Plugin version',
+        level: 'ok',
+        detail: `${installedVersion}, matching this StateNest`,
+      });
+    }
+  }
 
   for (const [label, relative] of [
     ['Hooks config', join('hooks', 'hooks.json')],

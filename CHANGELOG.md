@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Until 1.0.0, the on-disk data format may change between minor versions.
 Migrations are provided and are never destructive: see `docs/data-model.md`.
 
-## [Unreleased]
+## [0.2.0] — 2026-09-18
 
 StateNest stops needing to be operated. Installing it and opening Claude Code in
 a git repository is now the whole workflow: an ordinary day requires no
@@ -66,12 +66,22 @@ no longer on the critical path.
   existing `auto_pull: false` is honoured once, as `auto_sync: false`.
 - **A new location is recorded reliably** at session start rather than
   best-effort, so the same repository at a second path is always remembered.
+- **`statenest integrate claude` and `statenest doctor` now notice an outdated
+  plugin.** Claude Code installs a _copy_ of the plugin, keyed by its version, so
+  upgrading the npm package does not update it — it keeps running the copy it
+  took last time. That copy is self-consistent, so nothing breaks; it is simply
+  silently old. `integrate claude` now re-registers when the versions differ
+  instead of reporting "already installed", and `doctor` says which version
+  Claude Code is actually running.
 
 ### Fixed
 
 - Two sleeps used `unref`'d timers, which let the process exit before they
   fired. The debounce and the session-start refresh would both have been silent
   no-ops in a real hook process.
+- The background sync process inherited no `--home`, so a run scoped to a
+  non-default home would have resolved the default one and synced the wrong
+  data. The home and profile are now passed to it explicitly.
 
 ### Unchanged
 

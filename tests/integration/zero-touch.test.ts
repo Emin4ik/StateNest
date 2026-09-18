@@ -260,6 +260,30 @@ describe('zero-touch', () => {
     );
 
     it.runIf(GIT_AVAILABLE)(
+      'tells the background process which home and profile to work on',
+      async () => {
+        await machine(homeA.path, 'mac-a');
+        await connect(homeA.path);
+        const workspace = await Workspace.open({ home: homeA.path });
+
+        const seen: NodeJS.ProcessEnv[] = [];
+        await scheduleAutoSync(workspace, {
+          spawn: (env = {}) => {
+            seen.push(env);
+          },
+        });
+
+        // A fresh process inherits no `--home`. Without this it would resolve
+        // the default home and sync somebody else's data - which on a developer
+        // machine means the real one.
+        expect(seen).toHaveLength(1);
+        expect(seen[0]?.['STATENEST_HOME']).toBe(workspace.paths.home);
+        expect(seen[0]?.['STATENEST_PROFILE']).toBe(workspace.profile.name);
+      },
+      GIT_TEST_TIMEOUT,
+    );
+
+    it.runIf(GIT_AVAILABLE)(
       'does nothing when nothing asked for it',
       async () => {
         await machine(homeA.path, 'mac-a');

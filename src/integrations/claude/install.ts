@@ -151,7 +151,20 @@ export async function installClaudeIntegration(
   }
 
   const alreadyEnabled = await isPluginEnabled();
-  if (alreadyEnabled && !options.repair) {
+
+  // Claude Code installs a *copy*, keyed by the plugin's declared version, so
+  // upgrading the npm package leaves it running the copy it took last time.
+  // Treat that as work to do rather than as "already installed": the whole
+  // point of the upgrade is the new code, and a user who runs
+  // `statenest integrate claude` after upgrading has plainly asked for it.
+  const [installedVersion, bundledVersion] = await Promise.all([
+    installedPluginVersion(),
+    bundledPluginVersion(pluginDir),
+  ]);
+  const outdated =
+    installedVersion !== null && bundledVersion !== null && installedVersion !== bundledVersion;
+
+  if (alreadyEnabled && !options.repair && !outdated) {
     return {
       ...base,
       status: 'already-installed',
@@ -163,8 +176,9 @@ export async function installClaudeIntegration(
   const commands: string[] = [];
 
   // `marketplace add` is idempotent for a path already registered, but a
-  // repair should pick up a moved or upgraded package directory.
-  if (options.repair) {
+  // repair - or an upgrade - should pick up a moved or upgraded package
+  // directory rather than the one registered last time.
+  if (options.repair || outdated) {
     await runClaude(['plugin', 'marketplace', 'remove', MARKETPLACE_NAME], commands, {
       ignoreFailure: true,
     });
@@ -203,7 +217,9 @@ export async function installClaudeIntegration(
     status: alreadyEnabled ? 'updated' : 'installed',
     pluginDir,
     commands,
-    message: 'Restart Claude Code, or run /plugin, to pick it up.',
+    message: outdated
+      ? `Updated from ${installedVersion} to ${bundledVersion}. Restart Claude Code, or run /plugin, to pick it up.`
+      : 'Restart Claude Code, or run /plugin, to pick it up.',
   };
 }
 
@@ -257,6 +273,61 @@ export async function isPluginEnabled(): Promise<boolean> {
     );
   } catch {
     return false;
+  }
+}
+
+/**
+ * Which version of the plugin Claude Code actually has.
+ *
+ * This is not the same as the version of StateNest on the machine, and the
+ * difference matters. `claude plugin install` **copies** the plugin into
+ * `~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`, so upgrading the
+ * npm package leaves Claude Code running the copy it took last time. The hooks,
+ * the MCP server and the skills all move together - so a stale install is
+ * self-consistent rather than broken - but it is still stale, and nothing used
+ * to say so.
+ *
+ * Everything here is defensive: this file belongs to Claude Code, its shape may
+ * change, and a version we cannot read must degrade to "unknown" rather than to
+ * a wrong answer.
+ */
+export async function installedPluginVersion(): Promise<string | null> {
+  const raw = await readFileOrNull(
+    join(claudeConfigDir(), 'plugins', 'installed_plugins.json'),
+  );
+  if (!raw) return null;
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    const plugins = (parsed as { plugins?: unknown })?.plugins;
+    if (typeof plugins !== 'object' || plugins === null) return null;
+
+    for (const [key, value] of Object.entries(plugins as Record<string, unknown>)) {
+      if (!key.startsWith(`${PLUGIN_NAME}@`)) continue;
+      const entries = Array.isArray(value) ? value : [value];
+      for (const entry of entries) {
+        const version = (entry as { version?: unknown })?.version;
+        if (typeof version === 'string' && version !== '' && version !== 'unknown') {
+          return version;
+        }
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/** The version this StateNest would install, from the plugin manifest it ships. */
+export async function bundledPluginVersion(pluginDir: string | null): Promise<string | null> {
+  if (!pluginDir) return null;
+  const raw = await readFileOrNull(join(pluginDir, '.claude-plugin', 'plugin.json'));
+  if (!raw) return null;
+  try {
+    const version = (JSON.parse(raw) as { version?: unknown }).version;
+    return typeof version === 'string' ? version : null;
+  } catch {
+    return null;
   }
 }
 

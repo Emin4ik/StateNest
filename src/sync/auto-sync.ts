@@ -7,6 +7,8 @@ import {
   requestSync,
 } from '../core/machine-local.js';
 import { withExclusiveFileLock } from '../util/file-lock.js';
+import { HOME_ENV_VAR } from '../core/paths.js';
+import { PROFILE_ENV_VAR } from '../core/workspace.js';
 import { ProfileSync, type SyncResult } from './git-sync.js';
 
 /**
@@ -94,7 +96,18 @@ export async function scheduleAutoSync(
   if (!workspace.profile.sync.enabled || !workspace.profile.sync.remote) return;
 
   await requestSync(workspace.paths, workspace.profile.name, workspace.profile);
-  runner?.spawn();
+
+  // Tell the child which home and profile to work on, explicitly.
+  //
+  // It is a fresh process with only the arguments given here, so it would
+  // otherwise resolve the *default* home - and a caller who passed `--home`
+  // would have their background sync quietly operate on somebody else's data.
+  // Passing it through the environment rather than as arguments also means the
+  // child does not depend on how this process happened to be invoked.
+  runner?.spawn({
+    [HOME_ENV_VAR]: workspace.paths.home,
+    [PROFILE_ENV_VAR]: workspace.profile.name,
+  });
 }
 
 /**
@@ -249,7 +262,7 @@ export async function recordOutcome(workspace: Workspace, result: SyncResult): P
  * `performAutoSync`, and this only has to start a process and let go of it.
  */
 export interface BackgroundRunner {
-  spawn(): void;
+  spawn(env?: NodeJS.ProcessEnv): void;
 }
 
 /**
@@ -261,14 +274,14 @@ export interface BackgroundRunner {
  */
 export function selfRunner(args: string[], env: NodeJS.ProcessEnv = {}): BackgroundRunner {
   return {
-    spawn(): void {
+    spawn(extra: NodeJS.ProcessEnv = {}): void {
       const entry = process.argv[1];
       if (!entry) return;
       try {
         const child = spawn(process.execPath, [entry, ...args], {
           detached: true,
           stdio: 'ignore',
-          env: { ...process.env, ...env, STATENEST_BACKGROUND: '1' },
+          env: { ...process.env, ...env, ...extra, STATENEST_BACKGROUND: '1' },
         });
         child.unref();
       } catch {

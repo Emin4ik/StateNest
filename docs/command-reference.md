@@ -316,11 +316,18 @@ statenest --profile work projects   # one command, other profile
 ## Claude Code integration
 
 ```bash
-statenest integrate claude            # install the plugin
+statenest integrate claude            # install, or update after upgrading StateNest
 statenest integrate claude --repair   # reinstall over an existing install
 statenest integrate status            # is it installed and enabled?
 statenest integrate remove claude     # remove it; your data is untouched
 ```
+
+**Run `integrate claude` after upgrading StateNest.** Claude Code installs a
+_copy_ of the plugin, so a new npm version does not reach it on its own. The
+copy keeps working — its hooks, MCP server and skills all moved together, so it
+is old rather than broken — but it stays on the previous version until you say
+otherwise. `integrate claude` notices the difference and updates it;
+`statenest doctor` reports which version Claude Code is actually running.
 
 `integrate claude` takes `-y, --yes`. `integrate remove` takes `--purge` to also
 remove the registered marketplace entry, and the agent name is optional.
