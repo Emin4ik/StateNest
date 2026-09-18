@@ -78,7 +78,7 @@ describe('the fixtures themselves are valid instances', () => {
     const { detectSecrets } = await import('../../src/security/redact.js');
     const found = detectSecrets(FAKE_ENV).map((finding) => finding.ruleId);
     expect(found.length).toBeGreaterThan(0);
-    expect(FAKE_ENV).toContain('sk_live_' . 'Kq7n0trealZx92Mw4Jd8Pv51');
+    expect(FAKE_ENV).toContain(`${'sk_live_'}${'Kq7n0trealZx92Mw4Jd8Pv51'}`);
     expect(FAKE_ENV).toContain('sk-ant-api03-');
   });
 });
@@ -224,7 +224,7 @@ describe('security guarantees', () => {
       // import, an older version. The audit must still catch it.
       await workspace.store.writeState(
         project.id,
-        `# Current focus\n\nDebugging with sk-ant-' . 'api03-Kq7n0trealZx92Mw4Jd8Pv51Rt6Hb3Cs9YeKq7n0tre\n`,
+        `# Current focus\n\nDebugging with ${'sk-ant-'}${'api03-Kq7n0trealZx92Mw4Jd8Pv51Rt6Hb3Cs9YeKq7n0tre'}\n`,
       );
 
       const result = await auditProfile(workspace.profilePaths);
