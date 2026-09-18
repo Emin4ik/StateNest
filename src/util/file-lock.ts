@@ -1,5 +1,5 @@
 import { open, readFile, rm, stat } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { mkdir } from 'node:fs/promises';
 import { errnoCode } from './errors.js';
 
@@ -34,6 +34,14 @@ const DEFAULT_TIMEOUT_MS = 2_000;
 const DEFAULT_STALE_MS = 10_000;
 
 /**
+ * How many times to recreate a vanishing lock directory before giving up.
+ *
+ * If it disappears this often something else is deleting it, and spinning
+ * helps nobody.
+ */
+const MAX_MISSING_DIR_RETRIES = 10;
+
+/**
  * Run `work` while holding the lock for `filePath`.
  *
  * If the lock cannot be taken within the timeout, `work` runs anyway. That is
@@ -41,7 +49,51 @@ const DEFAULT_STALE_MS = 10_000;
  * waiting for a lock would delay somebody's coding session over bookkeeping.
  * Returning a possibly-lost increment is the better failure.
  */
+/**
+ * Work already queued for a given file, within this process.
+ *
+ * The file lock handles *other processes*; it cannot help with concurrency
+ * inside one, where it degrades to a timeout and then - because it fails open -
+ * to a lost update under load. That concurrency is real: the MCP server is a
+ * single process serving tool calls in parallel, and the plugin's hook handlers
+ * are invoked in-process too.
+ *
+ * Chaining onto the previous promise for the same path serialises those exactly,
+ * with no I/O, no timeout and nothing to fail open about.
+ */
+const inFlight = new Map<string, Promise<unknown>>();
+
 export async function withFileLock<T>(
+  filePath: string,
+  work: () => Promise<T>,
+  options: LockOptions = {},
+): Promise<T> {
+  const key = resolve(filePath);
+  const previous = inFlight.get(key) ?? Promise.resolve();
+
+  // Extended synchronously, so two callers in the same tick cannot both see an
+  // empty queue. A rejected predecessor must not cancel the queue, hence the
+  // swallow before chaining.
+  const run = previous.then(() => lockAcrossProcesses(filePath, work, options));
+
+  // The queued promise must never reject, or it would take out whoever chains
+  // onto it. Keep a reference to the exact promise stored, so the cleanup below
+  // compares like with like.
+  const queued = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  inFlight.set(key, queued);
+
+  try {
+    return await run;
+  } finally {
+    // Only clear if nobody queued behind us, or their ordering would be lost.
+    if (inFlight.get(key) === queued) inFlight.delete(key);
+  }
+}
+
+async function lockAcrossProcesses<T>(
   filePath: string,
   work: () => Promise<T>,
   options: LockOptions = {},
@@ -60,6 +112,7 @@ export async function withFileLock<T>(
 
 async function acquire(lockPath: string, timeoutMs: number, staleMs: number): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
+  let missingDirRetries = 0;
   await mkdir(dirname(lockPath), { recursive: true }).catch(() => {});
 
   for (let attempt = 0; ; attempt++) {
@@ -80,9 +133,17 @@ async function acquire(lockPath: string, timeoutMs: number, staleMs: number): Pr
       // Giving up here means running *unlocked*, which is the lost update this
       // module exists to prevent - so recreate the directory and try again
       // rather than treating a missing parent as unrecoverable.
+      //
+      // Bounded, and with the same backoff as any other retry. A first version
+      // of this retried immediately and without a limit: when the directory
+      // kept vanishing it spun ~30,000 times in two seconds, saturating a core
+      // and starving the very writers it was waiting for. An unbounded retry
+      // that does no waiting is a busy loop wearing a lock's clothing.
       if (code === 'ENOENT') {
-        if (Date.now() >= deadline) return false;
+        missingDirRetries += 1;
+        if (missingDirRetries > MAX_MISSING_DIR_RETRIES || Date.now() >= deadline) return false;
         await mkdir(dirname(lockPath), { recursive: true }).catch(() => {});
+        await delay(backoffMs(attempt));
         continue;
       }
 

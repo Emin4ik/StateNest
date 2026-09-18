@@ -65,6 +65,52 @@ describe('withFileLock', () => {
     expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({ n: 10 });
   });
 
+  it('serialises callers in this process, without relying on the file lock', async () => {
+    // The file lock guards against *other processes*. Inside one process it
+    // degrades to a timeout and, because it fails open, to a lost update under
+    // load — which is exactly what happened on a saturated CI runner. Callers
+    // in this process are now queued, so their critical sections cannot
+    // overlap at all.
+    const file = join(dir.path, 'ordering.json');
+    await writeFile(file, '{}');
+
+    const events: string[] = [];
+    await Promise.all(
+      Array.from({ length: 5 }, (_, index) =>
+        withFileLock(file, async () => {
+          events.push(`enter-${index}`);
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          events.push(`exit-${index}`);
+        }),
+      ),
+    );
+
+    // Every enter is immediately followed by its own exit: no interleaving.
+    for (let i = 0; i < events.length; i += 2) {
+      expect(events[i]!.replace('enter-', '')).toBe(events[i + 1]!.replace('exit-', ''));
+      expect(events[i]!.startsWith('enter-')).toBe(true);
+      expect(events[i + 1]!.startsWith('exit-')).toBe(true);
+    }
+  });
+
+  it('a failing caller does not break the queue behind it', async () => {
+    const file = join(dir.path, 'queue.json');
+    await writeFile(file, JSON.stringify({ n: 0 }));
+
+    const results = await Promise.allSettled([
+      withFileLock(file, async () => {
+        throw new Error('first fails');
+      }),
+      increment(file),
+      increment(file),
+    ]);
+
+    expect(results[0]!.status).toBe('rejected');
+    expect(results[1]!.status).toBe('fulfilled');
+    expect(results[2]!.status).toBe('fulfilled');
+    expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({ n: 2 });
+  });
+
   it('returns the value the work produced', async () => {
     const file = join(dir.path, 'value.json');
     await writeFile(file, '{}');
