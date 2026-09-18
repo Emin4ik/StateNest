@@ -105,7 +105,7 @@ Everything in this section was executed, not reasoned about.
 
 | Area | Result |
 | --- | --- |
-| Tests | 613 passing, 20 files |
+| Tests | 617 passing, 21 files |
 | Typecheck, lint, control bytes | Clean |
 | Packaged-artifact verification | 41/41 checks pass (`npm run verify:package`) |
 | Schema drift | Generated schemas match the code (9 files) |
@@ -129,12 +129,26 @@ correctly surfaced the last session's summary, blockers and next actions. A
 backup written by `pb export` restored into a fresh home with all three projects
 and their checkpoints intact.
 
-This pass found one defect, now fixed: `--yes` meant "assume the default", so on
-every prompt guarding something destructive it cancelled and exited 0.
+The Claude Code integration was then installed from that packaged artifact into
+an isolated `CLAUDE_CONFIG_DIR`, confirmed active by both `pb integrate status`
+and `pb doctor`, removed with `pb integrate remove claude`, and confirmed gone.
+Everything it wrote landed in the isolated directory; the real `~/.claude` was
+untouched, verified by timestamp before and after.
 
-Separately confirmed: no `pb` command writes anything to `CLAUDE_CONFIG_DIR`.
-Registering the plugin is an explicit `pb integrate claude` step and never a
-side effect of `init`, `scan`, `doctor` or any read command.
+This pass found three defects, all now fixed:
+
+1. `--yes` meant "assume the default", so on every prompt guarding something
+   destructive it cancelled and exited 0.
+2. `CLAUDE_CONFIG_DIR` was ignored when reading Claude Code's state, so
+   `pb doctor` reported on the real `~/.claude` even when pointed elsewhere —
+   and CONTRIBUTING.md's instruction to use a scratch directory did not protect
+   anyone who followed it.
+3. Seven user-facing messages hardcoded `npm install -g project-brain`, telling
+   users to install an unrelated package.
+
+Confirmed: no `pb` command writes to `CLAUDE_CONFIG_DIR` as a side effect.
+Registering the plugin is an explicit `pb integrate claude` step and never
+happens during `init`, `scan`, `doctor` or any read command.
 
 ---
 
