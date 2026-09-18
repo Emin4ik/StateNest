@@ -55,6 +55,13 @@ Trusted publishing cannot be configured for a package that does not exist, so
       ```
       This version will carry no provenance attestation. That is expected:
       provenance requires OIDC from a CI runner, which the bootstrap cannot be.
+- [ ] **Tag it afterwards, as normal.** The release workflow recognises the
+      bootstrap version, confirms the published package is this repository's,
+      skips the publish step and **finishes green** — it does not fail. See
+      `BOOTSTRAP_VERSION` in [release.yml](../../.github/workflows/release.yml).
+- [ ] **Retire the exception.** Once 0.1.0 has shipped, set `BOOTSTRAP_VERSION`
+      to `''` in that workflow and commit. From then on every duplicate,
+      including 0.1.0, fails like any other.
 
 ### Every release after the first
 
@@ -67,7 +74,8 @@ Trusted publishing cannot be configured for a package that does not exist, so
 - [ ] **Approve the `release` environment** if you have added required reviewers.
 - [ ] **Watch the run.** The workflow refuses a tag/version mismatch, refuses a
       version that already exists, runs the full release gate, and only then
-      publishes.
+      publishes. The bootstrap exception applies to one version number and only
+      while `BOOTSTRAP_VERSION` names it.
 
 ### One-time: configure trusted publishing (immediately after 0.1.0 exists)
 

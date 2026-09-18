@@ -30,6 +30,18 @@ on:
 permissions:
   contents: read
 
+env:
+  # The one version published by hand, because npm will not configure a trusted
+  # publisher for a package that does not exist yet. When that version is
+  # already on the registry AND the published package is provably this
+  # repository's, the publish step is skipped instead of failing, so the first
+  # public release is not a red workflow run.
+  #
+  # Clear this to '' once v0.1.0 has shipped. From then on every duplicate,
+  # including 0.1.0, fails like any other. scripts/check-publishable.mjs decides;
+  # tests/integration/publishable.test.ts pins both sides of the line.
+  BOOTSTRAP_VERSION: '0.1.0'
+
 jobs:
   release:
     name: Publish to npm
@@ -120,21 +132,13 @@ jobs:
           echo "RELEASE_VERSION=$pkg_version" >> "$GITHUB_ENV"
 
       # ---------------------------------------------------------------------
-      # Refuse to republish. npm forbids reusing a version anyway; failing here
-      # gives a comprehensible message instead of a registry error at the end.
+      # Decide whether this version may be published: publish, skip the
+      # one-time bootstrap release, or fail. The logic lives in a script rather
+      # than in this file so it can be tested - shell inside YAML cannot be.
       # ---------------------------------------------------------------------
-      - name: Refuse to republish an existing version
-        run: |
-          set -euo pipefail
-          name="$(node -p 'require("./package.json").name')"
-          existing="$(npm view "$name@$RELEASE_VERSION" version 2>/dev/null || true)"
-          if [ -n "$existing" ]; then
-            echo "::error::$name@$RELEASE_VERSION is already on the registry. \
-          A published version can never be replaced. Bump the version in package.json, \
-          commit, tag the new version and run again. Do not delete and republish."
-            exit 1
-          fi
-          echo "$name@$RELEASE_VERSION is not on the registry yet."
+      - name: Decide whether to publish
+        id: publishable
+        run: node scripts/check-publishable.mjs
 
       # ---------------------------------------------------------------------
       # The authoritative gate. Not a reduced copy of it.
@@ -178,11 +182,23 @@ jobs:
       # explicit and is what the provenance documentation asks for.
       # ---------------------------------------------------------------------
       - name: Publish to npm
-        if: github.event_name == 'push' || inputs.dry_run == false
+        if: |
+          steps.publishable.outputs.decision == 'publish' &&
+          (github.event_name == 'push' || inputs.dry_run == false)
         run: npm publish --provenance --access public
 
+      - name: Bootstrap release, already on npm
+        if: steps.publishable.outputs.decision == 'skip-bootstrap'
+        run: |
+          echo "Bootstrap release already exists on npm; publication step skipped."
+          echo "It was published by hand because npm cannot configure a trusted"
+          echo "publisher for a package that does not exist yet. Clear"
+          echo "BOOTSTRAP_VERSION in this workflow once v$RELEASE_VERSION has shipped."
+
       - name: Explain a skipped publish
-        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == true
+        if: |
+          steps.publishable.outputs.decision == 'publish' &&
+          github.event_name == 'workflow_dispatch' && inputs.dry_run == true
         run: |
           echo "Dry run: every check passed and the tarball was packed, but nothing was published."
           echo "Re-run with dry_run unchecked, or push the v$RELEASE_VERSION tag, to publish."

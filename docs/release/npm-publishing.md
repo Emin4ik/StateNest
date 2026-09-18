@@ -66,6 +66,37 @@ cloud-hosted CI runner, which by definition cannot be the bootstrap. Version
 0.1.0 will therefore be the only StateNest release without a provenance
 attestation, and that is expected rather than a defect.
 
+### Tagging the bootstrap version afterwards
+
+Tagging `v0.1.0` after publishing by hand would normally hit the workflow's
+duplicate-publish protection and produce a failed run — correct, but a poor
+thing for a first public release to show.
+
+So the workflow recognises exactly one version as the bootstrap, named by
+`BOOTSTRAP_VERSION` in [release.yml](../../.github/workflows/release.yml). When
+that version is already on the registry **and the published package's
+`repository` field is this repository**, the publish step is skipped, the run
+reports
+
+> Bootstrap release already exists on npm; publication step skipped.
+
+and finishes green.
+
+The exception is narrow on purpose:
+
+- it applies to one version number, written down in one place;
+- it requires the published package to be provably ours, so a name squatted by
+  somebody else fails rather than being silently accepted as our release;
+- every other duplicate still fails, including 0.1.0 once `BOOTSTRAP_VERSION`
+  is cleared.
+
+`scripts/check-publishable.mjs` makes the decision and
+`tests/integration/publishable.test.ts` pins both sides of it — that a
+legitimate bootstrap is skipped, and that an ordinary duplicate is not.
+
+**Clear `BOOTSTRAP_VERSION` once 0.1.0 has shipped.** It is a one-time
+allowance, not a standing one.
+
 ### Fallback, if an interactive publish is impossible
 
 Create a **granular access token** scoped to write only this package, publish
