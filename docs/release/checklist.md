@@ -26,7 +26,8 @@ the first release is done by hand and every one after it is not.
       you mean to publish. Never let the workflow choose it.
 - [ ] **CHANGELOG has an entry for this version**, and it is not still marked
       unreleased.
-- [ ] **Release notes drafted.** For 0.1.0, [v0.1.0.md](v0.1.0.md).
+- [ ] **Release notes drafted** at `docs/release/v<version>.md`. Most recent:
+      [v0.1.1.md](v0.1.1.md).
 - [ ] **Tarball inspected.**
       ```bash
       npm pack --dry-run --json --ignore-scripts
@@ -96,10 +97,11 @@ Trusted publishing cannot be configured for a package that does not exist, so
 
 - [ ] **Create the release.** Attach the notes; do not paste the whole CHANGELOG.
       ```bash
-      gh release create v0.1.0 \
+      VERSION="$(node -p 'require("./package.json").version')"
+      gh release create "v$VERSION" \
         --repo Emin4ik/StateNest \
-        --title "StateNest v0.1.0" \
-        --notes-file docs/release/v0.1.0.md
+        --title "StateNest v$VERSION" \
+        --notes-file "docs/release/v$VERSION.md"
       ```
 - [ ] **Check the release page** renders and its links resolve.
 
@@ -138,7 +140,9 @@ Trusted publishing cannot be configured for a package that does not exist, so
       statenest checkpoint -m "First checkpoint from the published package."
       statenest resume demo
       ```
-- [ ] **Verify provenance** (every release after 0.1.0).
+- [ ] **Verify provenance.** Every release from 0.1.1 onward publishes through
+      Trusted Publishing and must carry an attestation; 0.1.0 was the manual
+      bootstrap and has none.
       ```bash
       mkdir /tmp/verify && cd /tmp/verify && npm init -y >/dev/null
       npm install statenest

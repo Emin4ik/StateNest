@@ -8,6 +8,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Until 1.0.0, the on-disk data format may change between minor versions.
 Migrations are provided and are never destructive: see `docs/data-model.md`.
 
+## [0.1.1] — 2026-09-18
+
+A patch release driven by real use: dogfooding v0.1.0 across actual projects,
+and preparing StateNest for a second computer.
+
+### Added
+
+- A complete end-user guide ([docs/user-guide.md](docs/user-guide.md)) and a
+  command reference ([docs/command-reference.md](docs/command-reference.md))
+  written from the CLI itself rather than from memory, with a regression test
+  that reads the commands back out of the prose and asks the CLI whether each
+  one exists.
+- Multi-machine setup and sync documentation
+  ([docs/multi-machine.md](docs/multi-machine.md)), derived from tested
+  outcomes.
+- `statenest dashboard --all-profiles` — a **read-only** view of every profile
+  at once. Profile storage and profile sync stay completely separate; nothing
+  is copied between them.
+- Profile labels on every row of a unified view, and a per-profile breakdown
+  alongside the combined totals.
+
+### Fixed
+
+- `scan`, `add` and `init` no longer claim a project came from "another
+  machine" when it is simply a second copy of the same repository on this one.
+  Both situations produce the same registration outcome, so the claim now comes
+  from the data — whether a location on another machine actually exists.
+- Two genuinely different repositories that share a name are now
+  distinguishable in project listings, qualified by repository path. They were
+  never merged; they were merely indistinguishable.
+- Ambiguous project names give usable qualifiers instead of impossible advice.
+  `resume threads` used to answer `1. threads  2. threads` and suggest "use a
+  longer or more specific name", which cannot work when the names are
+  identical.
+
+### Documentation and safety
+
+- Stated exactly what `scan` knows and does not know, and separated facts
+  derived automatically from memory captured during agent activity from memory
+  written down deliberately.
+- Made explicit that `scan` does not read Claude Code history, and cannot
+  recover conversations from before the integration was installed.
+- Documented the Claude Code hook lifecycle, and which checkpoints are
+  automatic versus explicit — `SessionEnd` alone may preserve only metadata, so
+  `/statenest:checkpoint` still matters after an important short session.
+- Documented the safe two-machine first-sync procedure, including what happens
+  when both sides already hold different data.
+- Documented the production VPS recommendation: a server is a remote plus a
+  deployment record, with StateNest **not** installed on it. A full install is
+  for hosts you genuinely work on.
+- Corrected the discovery wording: a repository is recognised by a `.git`
+  *marker*, which is a directory in an ordinary clone and a file in a linked
+  worktree or submodule. The implementation has always accepted both.
+
+### Validation
+
+- Two-machine identity and round-trip behaviour is now covered: one repository
+  on two computers stays one project with two locations, and a full sync cycle
+  duplicates nothing.
+- First-sync, both-sides-populated, concurrent-edit, same-record conflict,
+  offline, secret-blocking and interrupted-rebase scenarios are covered against
+  a real git remote.
+- The cross-profile dashboard is proven read-only: both profile directories are
+  compared byte for byte after every endpoint is exercised.
+- The "42 created, 43 shown" observation from first use was **not reproduced**
+  and no defect was found. The invariant it would have violated — stored
+  projects equals projects before plus projects created — is now covered by a
+  regression test, so a future violation surfaces as a failing test.
+
 ## [0.1.0] — 2026-09-18
 
 First public release. Published to npm as

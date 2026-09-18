@@ -110,6 +110,11 @@ browser session is not.
 
 ## Target state: every release after the first
 
+**v0.1.1 is the first release published this way.** 0.1.0 was the manual
+bootstrap described above and carries no provenance attestation; every release
+from 0.1.1 onward is published by GitHub Actions through Trusted Publishing,
+with provenance, and is expected to be verifiable with `npm audit signatures`.
+
 ```
 git tag v0.1.1  ──▶  GitHub Actions  ──▶  release:check  ──▶  npm  ──▶  provenance
 ```

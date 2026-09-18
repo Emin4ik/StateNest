@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { execFile } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 
@@ -140,8 +141,14 @@ describe('the release publish gate', () => {
   });
 
   it('reads the real package.json when nothing is overridden', async () => {
+    // Derived, not hardcoded. The point is that it reads the manifest; a
+    // literal version here would fail on every release instead.
+    const manifest = JSON.parse(
+      readFileSync(join(import.meta.dirname, '..', '..', 'package.json'), 'utf8'),
+    ) as { name: string; version: string };
+
     const { code, out } = await run(['--published', 'none']);
     expect(code).toBe(0);
-    expect(out).toContain('statenest@0.1.0');
+    expect(out).toContain(`${manifest.name}@${manifest.version}`);
   });
 });

@@ -1,6 +1,6 @@
 {
   "name": "statenest",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local-first project memory and developer control plane: remembers your projects, machines, deployments and where you left off, and hands that context to your coding agent.",
   "keywords": [
     "cli",

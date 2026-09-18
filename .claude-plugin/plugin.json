@@ -1,7 +1,7 @@
 {
   "name": "statenest",
   "description": "Remembers your projects, machines, deployments and where you left off. Injects a short resume brief at session start and records what each session accomplished.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": {
     "name": "StateNest contributors"
   },

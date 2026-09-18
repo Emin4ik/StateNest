@@ -1,6 +1,6 @@
 # StateNest command reference
 
-Every command StateNest v0.1.0 implements. For the mental model and how the
+Every command StateNest v0.1.1 implements. For the mental model and how the
 pieces fit together, read the [user guide](user-guide.md) first.
 
 Anything here can be checked with `statenest <command> --help`.
