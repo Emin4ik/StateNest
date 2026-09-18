@@ -91,6 +91,53 @@ if (!Array.isArray(pkg.keywords) || pkg.keywords.length < 3) {
 }
 if (!pkg.engines?.node) problems.push('package.json is missing an engines.node range');
 
+// --- package-lock.json ------------------------------------------------------
+//
+// The lockfile records its own copy of the root package's metadata, and npm
+// only rewrites it when npm itself edits the lockfile. Editing package.json by
+// hand - or worse, editing the lockfile by hand - leaves the two disagreeing,
+// and nothing else here reads the lockfile at all.
+//
+// That is exactly how `pb`, a bin removed during the rename to StateNest,
+// survived in the lockfile for four releases while package.json had long since
+// dropped it. The fix is `npm install --package-lock-only`; this check is what
+// notices that it is needed.
+const lockRaw = read('package-lock.json');
+if (!lockRaw) {
+  problems.push('package-lock.json is missing');
+} else {
+  let lock = null;
+  try {
+    lock = JSON.parse(lockRaw);
+  } catch {
+    problems.push('package-lock.json is not valid JSON');
+  }
+
+  const root = lock?.packages?.[''];
+  if (!root) {
+    problems.push('package-lock.json has no root package entry');
+  } else {
+    const stale = (what) =>
+      problems.push(
+        `package-lock.json root ${what} disagrees with package.json. ` +
+          'Run: npm install --package-lock-only',
+      );
+
+    if (lock.name !== pkg.name) stale('name');
+    if (lock.version !== pkg.version || root.version !== pkg.version) stale('version');
+
+    // Compared as sorted JSON so key order never causes a false alarm.
+    const canonical = (value) =>
+      JSON.stringify(Object.fromEntries(Object.entries(value ?? {}).sort()));
+
+    if (canonical(root.bin) !== canonical(pkg.bin)) stale('bin');
+    if (canonical(root.dependencies) !== canonical(pkg.dependencies)) stale('dependencies');
+    if (canonical(root.devDependencies) !== canonical(pkg.devDependencies)) {
+      stale('devDependencies');
+    }
+  }
+}
+
 // --- LICENSE ---------------------------------------------------------------
 const license = read('LICENSE');
 if (!license) problems.push('LICENSE file is missing');
