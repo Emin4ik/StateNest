@@ -73,6 +73,12 @@ adapter seam is documented, but no other adapter exists.
 Code copies it into a version-keyed cache. Run `statenest integrate claude` after
 upgrading; `statenest doctor` reports the mismatch.
 
+**A new machine's own location is recorded from its second session.** The first
+session on a machine that is joining an existing profile adopts the remote
+history, which replaces the project record it had just created locally. The
+project, its history and its context are all correct immediately; only that
+machine's entry in `statenest where` waits for the next session.
+
 **Search is lexical.** It finds words you actually wrote, not synonyms. There is
 no embedding index and no vector database ([ADR 0007](adr/0007-lexical-search-not-embeddings.md)).
 

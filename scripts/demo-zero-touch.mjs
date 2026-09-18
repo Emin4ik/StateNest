@@ -47,7 +47,8 @@ const COMPACT_SUMMARY = [
   '',
   '- Implemented cost-based allocation',
   '- Added regression fixtures for tidal windows',
-  '- Fixed the refinery income calculation',
+  '- Next: re-run the winter fixtures against the new weights',
+  '- Blocked: the upstream tide feed has been returning 502s',
 ].join('\n');
 
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));

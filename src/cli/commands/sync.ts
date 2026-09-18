@@ -11,6 +11,8 @@ import { readMachineLocalState } from '../../core/machine-local.js';
 import { recordOutcome, performAutoSync } from '../../sync/auto-sync.js';
 import { describeRecordPath, labelRecord } from '../../sync/record-label.js';
 import { Registry } from '../../core/registry.js';
+import { projectLabels } from '../../core/resolve.js';
+import type { Workspace } from '../../core/workspace.js';
 import { select } from '../prompt.js';
 
 export function syncCommand(): Command {
@@ -164,13 +166,14 @@ export function syncCommand(): Command {
           process.exitCode = 1;
           break;
 
-        case 'conflict':
+        case 'conflict': {
+          const nameOf = await projectNameResolver(workspace);
           failure('StateNest needs your attention.');
           print('');
           print('  Two machines changed the same thing:');
           print('');
           for (const file of result.conflicts.slice(0, 10)) {
-            print(`    ${style.yellow(describeRecordPath(file))}`);
+            print(`    ${style.yellow(describeRecordPath(file, nameOf))}`);
           }
           if (result.conflicts.length > 10) {
             print(style.dim(`    ... and ${result.conflicts.length - 10} more`));
@@ -189,6 +192,7 @@ export function syncCommand(): Command {
           print(bullet(style.cyan('statenest sync repair')));
           process.exitCode = 1;
           break;
+        }
 
         case 'offline':
           print(`${style.yellow('Offline')} — ${result.message}`);
@@ -249,8 +253,9 @@ export function syncCommand(): Command {
       print('');
 
       if (local.sync_health.state === 'conflict' && local.sync_health.conflicts.length > 0) {
+        const nameOf = await projectNameResolver(workspace);
         for (const file of local.sync_health.conflicts.slice(0, 5)) {
-          print(`    ${style.yellow(describeRecordPath(file))}`);
+          print(`    ${style.yellow(describeRecordPath(file, nameOf))}`);
         }
         print('');
         print(bullet(style.cyan('statenest sync repair')));
@@ -300,10 +305,9 @@ export function syncCommand(): Command {
         }
 
         // Project names, so the questions are about work rather than paths.
-        const registry = new Registry(workspace.store);
-        const projects = await registry.all();
-        const nameOf = (id: string): string | null =>
-          projects.find((project) => project.id === id)?.name ?? null;
+        // Same resolver the conflict notice uses, so the two cannot disagree
+        // about what a record is called.
+        const nameOf = await projectNameResolver(workspace);
 
         const sides = await sync.conflictSides(health.conflict_remote_sha, health.conflicts);
         const choices = new Map<string, 'mine' | 'theirs'>();
@@ -373,6 +377,32 @@ export function syncCommand(): Command {
     });
 
   return command;
+}
+
+/**
+ * Resolve project ids in conflicting paths to the names a person recognises.
+ *
+ * `projects/prj_57dh4nhah58x/state.md` means nothing to anybody; "harbour —
+ * current state" is the same fact in the user's own vocabulary. `sync repair`
+ * already did this, so the first notice they see should not be the one that
+ * speaks in ids.
+ *
+ * Built lazily - only when there is a conflict to describe - so an ordinary
+ * sync does not pay to load the registry. Reads StateNest's own store and
+ * nothing else; no source repository is touched. Any failure falls back to the
+ * id, which is unhelpful but never wrong.
+ */
+async function projectNameResolver(
+  workspace: Workspace,
+): Promise<(projectId: string) => string | null> {
+  try {
+    const labels = projectLabels(await new Registry(workspace.store).all());
+    return (projectId) => labels.get(projectId) ?? null;
+  } catch {
+    // A registry that cannot be read is exactly when a conflict is most likely.
+    // Degrade to ids rather than failing the command that explains the problem.
+    return () => null;
+  }
 }
 
 /**

@@ -494,6 +494,7 @@ async function onPostCompact(input: HookInput): Promise<string> {
       completed: condensed.completed,
       next: condensed.next,
       blockers: condensed.blockers,
+      decisions: condensed.decisions,
       tags: ['auto', 'compaction'],
     },
     {
@@ -639,6 +640,7 @@ export async function condenseSummary(summary: string): Promise<{
   completed: string[];
   next: string[];
   blockers: string[];
+  decisions: string[];
 }> {
   // Redaction runs first, over the whole text, so a credential is removed
   // wherever it appears - not merely dropped by the condensing that follows.
@@ -646,16 +648,19 @@ export async function condenseSummary(summary: string): Promise<{
   const clean = redactSecrets(summary).text;
 
   const prose: string[] = [];
-  const completed: string[] = [];
-  const next: string[] = [];
-  const blockers: string[] = [];
+  const buckets: Record<Bucket, string[]> = {
+    completed: [],
+    next: [],
+    blockers: [],
+    decisions: [],
+  };
   let inCodeFence = false;
   let seenBullet = false;
 
   // Which bucket subsequent bullets belong to, driven by the last heading or
   // lead-in line seen. A compaction summary is written for a model, but it
   // still tends to group its content under recognisable labels.
-  let bucket: 'completed' | 'next' | 'blockers' = 'completed';
+  let bucket: Bucket = 'completed';
 
   for (const rawLine of clean.split('\n')) {
     if (/^\s*(?:```|~~~)/.test(rawLine)) {
@@ -681,9 +686,12 @@ export async function condenseSummary(summary: string): Promise<{
       seenBullet = true;
       const text = bullet[1]!.replace(/^\[[ xX~-]\]\s*/, '').replace(/[*_`]/g, '').trim();
       if (text.length <= 3) continue;
-      const target =
-        bucket === 'next' ? next : bucket === 'blockers' ? blockers : completed;
-      if (target.length < 10) target.push(text);
+
+      // A bullet that names its own category wins over the heading above it.
+      const self = classifyBullet(text);
+      const target = buckets[self ? self.bucket : bucket];
+      const value = self ? self.text : text;
+      if (value.length > 3 && target.length < 10) target.push(value);
       continue;
     }
 
@@ -696,7 +704,7 @@ export async function condenseSummary(summary: string): Promise<{
     const inlineBucket = classifyLabel(text);
     if (seenBullet && inlineBucket && inlineBucket !== 'completed') {
       const stripped = text.replace(/^[^:]*:\s*/, '').trim();
-      const target = inlineBucket === 'next' ? next : blockers;
+      const target = buckets[inlineBucket];
       if (stripped !== '' && target.length < 10) target.push(stripped);
       continue;
     }
@@ -710,24 +718,54 @@ export async function condenseSummary(summary: string): Promise<{
       paragraph.length > 0
         ? truncateWords(paragraph, 600)
         : 'Context was compacted during a long working session.',
-    completed,
-    next,
-    blockers,
+    completed: buckets.completed,
+    next: buckets.next,
+    blockers: buckets.blockers,
+    decisions: buckets.decisions,
   };
 }
 
-function classifyLabel(text: string): 'completed' | 'next' | 'blockers' | null {
+type Bucket = 'completed' | 'next' | 'blockers' | 'decisions';
+
+function classifyLabel(text: string): Bucket | null {
   const value = text.toLowerCase();
-  if (/\b(still open|remaining|next step|next|todo|to do|unfinished|outstanding|follow[- ]?up)\b/.test(value)) {
+  if (/\b(still open|remaining|next steps?|next|todos?|to do|unfinished|outstanding|follow[- ]?ups?)\b/.test(value)) {
     return 'next';
   }
-  if (/\b(blocked|blocker|blocking|stuck|problem|issue|failing)\b/.test(value)) {
+  if (/\b(blocked|blockers?|blocking|stuck|problems?|issues?|failing)\b/.test(value)) {
     return 'blockers';
+  }
+  if (/\b(decision|decisions|decided|chose|rationale)\b/.test(value)) {
+    return 'decisions';
   }
   if (/\b(completed|done|accomplished|changes|work done|finished|implemented)\b/.test(value)) {
     return 'completed';
   }
   return null;
+}
+
+/**
+ * A bullet that labels itself, as in `- Next: re-run the winter fixtures`.
+ *
+ * Claude Code's summaries group bullets under headings most of the time, but
+ * not always - and a bullet that says what it is should be believed over the
+ * heading it happens to sit under. Without this, `Next:` and `Blocked:` bullets
+ * were filed as work already completed, which is worse than filing them
+ * nowhere: a resume brief would claim you had finished the thing blocking you.
+ *
+ * Deliberately narrow. It fires only on a short leading `Label:` whose word is
+ * already recognised, so ordinary prose containing a colon - "Refactor: split
+ * the allocator" - classifies as nothing and is left exactly where it was.
+ * Nothing here infers meaning from a sentence.
+ */
+function classifyBullet(text: string): { bucket: Bucket; text: string } | null {
+  const prefixed = /^([A-Za-z][A-Za-z \t/-]{1,24}):\s+(\S.*)$/.exec(text);
+  if (!prefixed) return null;
+
+  const bucket = classifyLabel(prefixed[1]!.trim());
+  if (!bucket) return null;
+
+  return { bucket, text: prefixed[2]!.trim() };
 }
 
 function truncateWords(text: string, maxChars: number): string {

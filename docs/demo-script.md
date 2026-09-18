@@ -241,16 +241,22 @@ question they are actually asking.
 
 - **Machine names come from the hostname.** Two shells on one physical machine
   will show the _same_ machine name, even though the machine ids differ and
-  everything else is correct. Record on two real machines, or say so.
+  everything else is correct. `npm run demo:zero-touch` sets them explicitly;
+  if you record by hand, use two real machines or say so.
+- **The second machine's own location appears from its second session.** Its
+  first session adopts the remote history, which replaces the record it had just
+  created locally. Everything else is correct immediately, and the demo script
+  accounts for this — do not present the first session's `where` output.
 - **Paths in the captures above were shortened.** The real output prints
   absolute paths, including the temporary directories a fixture run uses.
   Shorten for legibility, never invent.
 - **The first session's brief is nearly empty.** That is correct — there is no
   history yet. Showing it makes the second machine's brief mean something.
-- **`Recently completed` lists the summary's bullets as written.** If a bullet
-  says "Next: …", it will still appear under "Recently completed" — the
-  condenser does not reclassify. Choose demo bullets that are genuinely
-  completed work rather than editing the output afterwards.
+- **A bullet that labels itself is filed by its own label.** `- Next: …` and
+  `- Blocked: …` land under "Next" and "Open blockers", not under "Recently
+  completed". Bullets with no label follow the heading above them. Nothing is
+  inferred from prose, so `- Refactor: split the allocator` stays where it was
+  written.
 - **Do not fake latency.** Session start is around 100ms; there is nothing to
   hide and nothing to speed up in post.
 - **Use a throwaway `STATENEST_HOME` and example remotes.** Never record your

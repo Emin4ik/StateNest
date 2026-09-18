@@ -35,10 +35,13 @@ src/security/     secret scanning and redaction
 src/util/         atomic fs, file locks, paths, time, errors
 ```
 
-**Dependency direction is one-way and enforced by review, not by a test:
-`src/core/` must never import `src/integrations/`.** Only CLI commands do, to
-install and inspect the adapter. Keep it that way — Claude Code is the first
-adapter, not the architecture. The seam is
+**Dependency direction is one-way, and a test enforces it.** `core`, `storage`,
+`sync`, `checkpoints`, `git`, `discovery` and `security` must never import
+`src/integrations/`. Only CLI commands do, to install and inspect the adapter.
+[`tests/unit/architecture.test.ts`](tests/unit/architecture.test.ts) fails with
+the offending file and line if that changes — if you hit it, move the shared
+code into core or invert the call so the adapter depends on core. Do not add an
+exception. Claude Code is the first adapter, not the architecture; the seam is
 [docs/architecture/adapters.md](docs/architecture/adapters.md).
 
 Three ideas everything follows from, explained in
