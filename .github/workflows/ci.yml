@@ -113,3 +113,65 @@ jobs:
             }
             console.log('plugin manifests are valid');
           "
+
+  # The single gate a release must pass.
+  #
+  # Everything above proves the code works on each platform. This job answers a
+  # different question — may this be published? — and it is deliberately one
+  # command, so that "it passed CI" and "it is releasable" cannot drift apart.
+  #
+  # It fails today, on purpose: `check:metadata` refuses while the project name
+  # and repository owner are placeholders. See docs/release-readiness.md.
+  release-gate:
+    name: Release gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.12'
+          cache: npm
+
+      - run: npm ci
+
+      - name: npm run release:check
+        run: npm run release:check
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=low
+
+      - name: Refuse install-time scripts in the dependency tree
+        run: |
+          # A postinstall script in a transitive dependency is arbitrary code
+          # execution on every user's machine at install time. There are none
+          # today; this keeps it that way.
+          node -e "
+            const { execFileSync } = require('node:child_process');
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const tree = JSON.parse(
+              execFileSync('npm', ['ls', '--omit=dev', '--all', '--json'], {
+                maxBuffer: 64 * 1024 * 1024,
+              }).toString(),
+            );
+            const names = new Set();
+            (function walk(node) {
+              for (const [name, dep] of Object.entries(node.dependencies ?? {})) {
+                if (!names.has(name)) { names.add(name); walk(dep); }
+              }
+            })(tree);
+            const offenders = [];
+            for (const name of names) {
+              const file = path.join('node_modules', name, 'package.json');
+              if (!fs.existsSync(file)) continue;
+              const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+              for (const hook of ['preinstall', 'install', 'postinstall']) {
+                if (pkg.scripts?.[hook]) offenders.push(name + ' -> ' + hook);
+              }
+            }
+            if (offenders.length) {
+              console.error('Install-time scripts found:\n  ' + offenders.join('\n  '));
+              process.exit(1);
+            }
+            console.log('No install-time scripts in ' + names.size + ' production packages.');
+          "

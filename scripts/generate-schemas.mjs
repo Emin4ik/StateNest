@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import {
@@ -29,7 +29,11 @@ import { SCHEMA_ID_BASE } from '../dist/core/metadata.js';
  */
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const outDir = join(root, 'schemas');
+
+// `--out <dir>` lets the drift check regenerate somewhere disposable and
+// compare, instead of writing over the committed files and asking git.
+const outFlag = process.argv.indexOf('--out');
+const outDir = outFlag === -1 ? join(root, 'schemas') : resolve(process.argv[outFlag + 1]);
 
 const SCHEMAS = [
   ['project', ProjectSchema, 'A project: what it is, where it lives, where it deploys.'],
@@ -82,4 +86,4 @@ await writeFile(
   ].join('\n'),
 );
 
-process.stderr.write(`Wrote ${written.length} schemas to schemas/\n`);
+process.stderr.write(`Wrote ${written.length} schemas to ${outDir}\n`);

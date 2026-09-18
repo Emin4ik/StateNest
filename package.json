@@ -62,10 +62,12 @@
     "check:bytes": "node scripts/check-source-bytes.mjs",
     "verify": "npm run typecheck && npm run lint && npm run check:bytes && npm test && npm run build",
     "schemas": "node scripts/generate-schemas.mjs",
+    "check:schemas": "node scripts/check-schemas.mjs",
     "check:metadata": "node scripts/check-metadata.mjs",
     "metadata:sync": "node scripts/sync-metadata.mjs",
     "verify:package": "node scripts/verify-package.mjs",
-    "bench": "node scripts/benchmark.mjs"
+    "bench": "node scripts/benchmark.mjs",
+    "release:check": "npm run verify && npm run check:schemas && npm run verify:package && npm run check:metadata"
   },
   "dependencies": {
     "commander": "^15.0.0",
