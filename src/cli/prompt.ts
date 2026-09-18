@@ -48,10 +48,19 @@ export async function ask(question: string, options: PromptOptions = {}): Promis
 
 export async function confirm(
   question: string,
-  options: { defaultValue?: boolean; assumeDefaults?: boolean } = {},
+  options: { defaultValue?: boolean; assumeYes?: boolean } = {},
 ): Promise<boolean> {
+  // `--yes` means yes. It used to mean "assume the default", which for the
+  // prompts that matter - overwriting data, pushing to a remote - defaults to
+  // no, so `pb import --yes` printed "Cancelled. Nothing was changed." and
+  // exited 0. A flag that silently does the opposite of what it says is worse
+  // than no flag.
+  if (options.assumeYes) return true;
+
+  // Without that explicit authorisation, a non-interactive run takes the
+  // cautious default rather than guessing.
   const fallback = options.defaultValue ?? true;
-  if (options.assumeDefaults || !isInteractive()) return fallback;
+  if (!isInteractive()) return fallback;
 
   const hint = fallback ? 'Y/n' : 'y/N';
   const answer = (await readline().question(`${question} ${style.dim(`[${hint}]`)} `))

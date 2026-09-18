@@ -170,6 +170,8 @@ pb decision add "..."        record why you chose something
 pb remote import-ssh         pick servers from your ~/.ssh/config
 pb deploy add <project> ...  record where a project runs
 pb profile create work       keep work and personal separate
+pb export backup.tgz         back up everything to one file
+pb import backup.tgz         restore from a backup
 pb doctor                    check everything, with fixes
 pb privacy audit             scan your own data for secrets
 ```

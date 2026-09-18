@@ -124,7 +124,7 @@ export function importCommand(): Command {
 
           const confirmed = await confirm('  Continue?', {
             defaultValue: false,
-            assumeDefaults: Boolean(options.yes),
+            assumeYes: Boolean(options.yes),
           });
           if (!confirmed) {
             print('Cancelled. Nothing was changed.');

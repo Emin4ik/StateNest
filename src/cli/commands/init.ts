@@ -122,7 +122,7 @@ async function runInit(options: InitOptions): Promise<void> {
   if (options.claude && claudeAvailable) {
     const wanted = await confirm('\nInstall the Claude Code integration?', {
       defaultValue: true,
-      assumeDefaults,
+      assumeYes: assumeDefaults,
     });
     if (wanted) claudeResult = await installClaudeIntegration({ assumeDefaults });
   }

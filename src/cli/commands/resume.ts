@@ -188,10 +188,15 @@ function render(
       }
     } else {
       const last = brief.checkpoints[0]!;
+      const count = brief.checkpoints.length;
+      // "3 loaded" described the program's internals, not the user's
+      // situation. Say what is there and how to read it.
       print(
         style.dim(
-          `  Last checkpoint ${relativeTime(last.meta.timestamp)}. ` +
-            `${brief.checkpoints.length} loaded — use --full to read them.`,
+          count === 1
+            ? `  One checkpoint, ${relativeTime(last.meta.timestamp)}. Read it with --full.`
+            : `  ${count} checkpoints, most recent ${relativeTime(last.meta.timestamp)}. ` +
+              `Read them with --full.`,
         ),
       );
     }

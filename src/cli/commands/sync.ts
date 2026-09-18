@@ -76,7 +76,7 @@ export function syncCommand(): Command {
 
         const confirmed = await confirm('That repository is private. Continue?', {
           defaultValue: false,
-          assumeDefaults: Boolean(options.yes),
+          assumeYes: Boolean(options.yes),
         });
         if (!confirmed) {
           print('Cancelled. Nothing was changed.');

@@ -105,7 +105,7 @@ export function removeCommand(): Command {
 
         const confirmed = await confirm('Continue?', {
           defaultValue: false,
-          assumeDefaults: Boolean(options.yes),
+          assumeYes: Boolean(options.yes),
         });
         if (!confirmed) {
           print('Cancelled.');

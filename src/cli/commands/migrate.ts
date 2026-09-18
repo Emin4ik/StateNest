@@ -121,7 +121,7 @@ export function migrateCommand(): Command {
 
         const confirmed = await confirm('  Apply these migrations?', {
           defaultValue: true,
-          assumeDefaults: Boolean(options.yes),
+          assumeYes: Boolean(options.yes),
         });
         if (!confirmed) {
           print('  Cancelled. Nothing was changed.');
