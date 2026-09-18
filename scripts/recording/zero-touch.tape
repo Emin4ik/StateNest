@@ -6,9 +6,11 @@
 #   npm run build
 #   vhs scripts/recording/zero-touch.tape
 #
-# Produces docs/assets/zero-touch.gif. That file is deliberately NOT committed:
-# it is a binary that would grow the repository on every re-record, and this
-# tape regenerates it from the real product in about a minute.
+# Produces docs/assets/zero-touch.gif, which the README embeds and which IS
+# committed - GitHub cannot render an asset that is not in the repository. Every
+# other recording stays gitignored, so an experimental render cannot be
+# committed by accident. Each replacement of the launch asset stays in git
+# history, so render elsewhere while you are still adjusting.
 #
 # Everything recorded is real output from scripts/demo-zero-touch.mjs, which
 # drives the actual Claude Code hook entry points and the actual background

@@ -25,9 +25,20 @@ needs no StateNest commands at all.
 
 ---
 
+## See it in action
+
+One project. Two machines. No manual StateNest commands between them.
+
+![StateNest recognising a repository on one machine and restoring that context on another, with no commands typed in between](docs/assets/zero-touch.gif)
+
+Reproduce it yourself with `npm run demo:zero-touch` — it drives the real hooks
+and the real background sync against throwaway fixtures.
+
+---
+
 ## What happens automatically
 
-Every row below is behaviour in v0.2.0, not intent.
+Every row below is current behaviour, not intent.
 
 | When                                     | What StateNest does                                                                                                                               |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |

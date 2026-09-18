@@ -23,16 +23,22 @@ driving the **real** Claude Code hook processes and the **real** background
 sync. Every block it prints came out of StateNest; the script writes no output
 of its own. It never touches your real `~/.statenest`.
 
-To record it as a GIF without committing a binary to the repository:
+To re-record the GIF the README embeds:
 
 ```bash
 brew install vhs                              # github.com/charmbracelet/vhs
 vhs scripts/recording/zero-touch.tape         # -> docs/assets/zero-touch.gif
 ```
 
-The `.tape` file is committed; the GIF deliberately is not. It regenerates from
-the real product in about a minute, and a re-recorded binary would grow the
-repository every time.
+`docs/assets/zero-touch.gif` is the recording the README embeds, and it **is**
+committed — GitHub cannot render an asset that is not in the repository. It is
+the one exception: `.gitignore` still excludes every other recording, so a
+re-record you are experimenting with does not end up in a commit by accident.
+
+Re-recording the launch asset therefore means replacing a tracked binary, and
+each replacement stays in git history. Worth it once for the README; not worth
+it for an iteration. Render somewhere else while you are still adjusting, and
+copy the result into place when you are happy with it.
 
 ---
 
