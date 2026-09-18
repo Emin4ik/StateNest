@@ -28,13 +28,8 @@
     "pb": "dist/cli/bin.js",
     "project-brain": "dist/cli/bin.js"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
@@ -47,7 +42,8 @@
     "README.md",
     "LICENSE",
     "CHANGELOG.md",
-    "scripts/build-plugin.mjs"
+    "scripts/build-plugin.mjs",
+    "!dist/mcp"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/build-plugin.mjs",
@@ -72,13 +68,13 @@
     "bench": "node scripts/benchmark.mjs"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
     "commander": "^15.0.0",
     "picocolors": "^1.1.1",
     "yaml": "^2.9.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@types/node": "^22.20.0",
     "@vitest/coverage-v8": "^5.0.1",
     "esbuild": "^0.28.2",

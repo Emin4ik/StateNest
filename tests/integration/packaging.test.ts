@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { cp, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CLI_COMMAND, PACKAGE_NAME } from '../../src/core/metadata.js';
@@ -16,6 +17,17 @@ const ROOT = join(import.meta.dirname, '..', '..');
  * assertions are unchanged; only the patience is.
  */
 const PROCESS_TIMEOUT = 120_000;
+
+interface Manifest {
+  bin: Record<string, string>;
+  files: string[];
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+}
+
+const manifest = JSON.parse(
+  readFileSync(join(ROOT, 'package.json'), 'utf8'),
+) as Manifest;
 
 /**
  * What actually ships.
@@ -118,10 +130,6 @@ describe('the published package', () => {
   }, PROCESS_TIMEOUT);
 
   it('declares the binaries it promises', async () => {
-    const manifest = JSON.parse(await readFile(join(ROOT, 'package.json'), 'utf8')) as {
-      bin: Record<string, string>;
-      files: string[];
-    };
     // Derived, not hardcoded: renaming the package must not silently leave a
     // stale command name behind in the manifest.
     expect(Object.keys(manifest.bin).sort()).toEqual([CLI_COMMAND, PACKAGE_NAME].sort());
@@ -195,6 +203,99 @@ describe('the plugin entry points are self-contained', () => {
       expect(stillRunning, `server exited with ${exited}: ${stderr}`).toBe(true);
     } finally {
       await cleanup();
+    }
+  }, PROCESS_TIMEOUT);
+});
+
+/**
+ * What the published CLI is allowed to require at runtime.
+ *
+ * `@modelcontextprotocol/sdk` was a runtime dependency, and it alone pulled in
+ * 90 transitive packages — an HTTP server stack, a JSON-schema validator, a
+ * CORS implementation — for a tool that only ever speaks stdio. Nothing
+ * reachable from the CLI imported it: the MCP server that actually ships is
+ * `dist-plugin/server.js`, an esbuild bundle with no external imports at all.
+ * Moving it to devDependencies took a real install from 94 packages to 4.
+ *
+ * That is only safe while it stays true. These tests fail the moment published
+ * code starts importing something the package does not declare.
+ */
+describe('the published CLI declares everything it needs', () => {
+  const DECLARED = new Set(Object.keys(manifest.dependencies ?? {}));
+
+  /**
+   * Bare specifiers in `tsc` output, which has no bundling to confuse us.
+   *
+   * Every pattern is anchored to a single line. A first attempt allowed the
+   * match to span newlines and promptly "found" a dependency called
+   * `.command(` inside a chained call expression — a scanner that reads string
+   * literals as imports fails in whichever direction is least useful.
+   */
+  function bareImports(source: string): string[] {
+    const found = new Set<string>();
+    const patterns = [
+      // import x from 'pkg';  /  export { y } from 'pkg';
+      /^\s*(?:import|export)\b[^\n;]*?\bfrom\s*['"]([^'"\n]+)['"]/gm,
+      // import 'pkg';  (side-effect only)
+      /^\s*import\s*['"]([^'"\n]+)['"]/gm,
+      // the closing line of a multi-line named import
+      /^\s*\}\s*from\s*['"]([^'"\n]+)['"]/gm,
+    ];
+    for (const pattern of patterns) {
+      for (const match of source.matchAll(pattern)) {
+        const spec = match[1]!;
+        if (spec.startsWith('.') || spec.startsWith('node:')) continue;
+        // Reduce `zod/v4` and `@scope/pkg/sub` to the package name.
+        const parts = spec.split('/');
+        found.add(spec.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0]!);
+      }
+    }
+    return [...found];
+  }
+
+  it('imports nothing it has not declared as a runtime dependency', async () => {
+    const files = (await packedFiles()).filter(
+      (file) => file.startsWith('dist/') && file.endsWith('.js'),
+    );
+    expect(files.length, 'expected compiled output in the package').toBeGreaterThan(20);
+
+    const undeclared = new Map<string, string>();
+    for (const file of files) {
+      for (const spec of bareImports(await readFile(join(ROOT, file), 'utf8'))) {
+        if (!DECLARED.has(spec)) undeclared.set(spec, file);
+      }
+    }
+
+    expect(
+      [...undeclared].map(([spec, file]) => `${spec} (imported by ${file})`),
+      'published code may only import declared runtime dependencies',
+    ).toEqual([]);
+  }, PROCESS_TIMEOUT);
+
+  it('does not publish the unbundled MCP server', async () => {
+    // It is the only thing that imported the SDK. If it comes back, so does the
+    // 90-package dependency tree, and the `files` negation has stopped working.
+    const files = await packedFiles();
+    expect(files.filter((file) => file.startsWith('dist/mcp/'))).toEqual([]);
+    // What replaces it must still be there.
+    expect(files).toContain('dist-plugin/server.js');
+  }, PROCESS_TIMEOUT);
+
+  it('points only at files that exist', async () => {
+    const files = new Set(await packedFiles());
+    for (const target of Object.values(manifest.bin)) {
+      expect(files, `bin target ${target} must be published`).toContain(target);
+    }
+    // `main`/`types` are deliberately absent: there is no library entry point,
+    // and declaring one that was never built is how the old package advertised
+    // an import that failed with ERR_MODULE_NOT_FOUND.
+    const pkg = manifest as unknown as Record<string, unknown>;
+    for (const field of ['main', 'types']) {
+      if (pkg[field] !== undefined) {
+        expect(files, `${field} points at ${String(pkg[field])}`).toContain(
+          String(pkg[field]).replace(/^\.\//, ''),
+        );
+      }
     }
   }, PROCESS_TIMEOUT);
 });
