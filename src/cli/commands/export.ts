@@ -69,15 +69,17 @@ export function exportCommand(): Command {
         basename(source),
       ];
 
-      const result = await execFileAsync('tar', args, { timeout: 300_000 }).catch(
-        (error: { stderr?: string; message?: string }) => {
-          throw new BrainError('EXPORT_FAILED', 'Could not write the archive.', {
-            details: [error.stderr?.trim() || error.message || 'tar failed'],
-            hints: ['Check that `tar` is available and the destination is writable.'],
-          });
-        },
-      );
-      void result;
+      await execFileAsync('tar', args, { timeout: 300_000 }).catch(async (error: unknown) => {
+        const { TarUnavailableError } = await import('../../storage/archive.js');
+        const { errnoCode } = await import('../../util/errors.js');
+        if (errnoCode(error) === 'ENOENT') throw new TarUnavailableError();
+
+        const shaped = error as { stderr?: string; message?: string };
+        throw new BrainError('EXPORT_FAILED', 'Could not write the archive.', {
+          details: [shaped.stderr?.trim() || shaped.message || 'tar failed'],
+          hints: ['Check that the destination directory is writable.'],
+        });
+      });
 
       const size = (await stat(target)).size;
 

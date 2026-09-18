@@ -24,8 +24,21 @@ export function resolveUserPath(input: string, cwd = process.cwd(), home = homed
  */
 export function contractHome(path: string, home = homedir()): string {
   if (path === home) return '~';
-  const prefix = home.endsWith(sep) ? home : home + sep;
-  return path.startsWith(prefix) ? `~${sep}${path.slice(prefix.length)}` : path;
+  if (home === '') return path;
+
+  // Both separators are accepted regardless of the platform this is running
+  // on. A synced profile contains paths recorded by other machines, so macOS
+  // routinely displays a Windows path - and using only the local separator
+  // meant those were never collapsed.
+  const trimmedHome = home.replace(/[/\\]+$/, '');
+  const separator = trimmedHome.includes('\\') ? '\\' : sep;
+
+  for (const candidate of [`${trimmedHome}/`, `${trimmedHome}\\`]) {
+    if (path.startsWith(candidate)) {
+      return `~${separator}${path.slice(candidate.length)}`;
+    }
+  }
+  return path;
 }
 
 /**

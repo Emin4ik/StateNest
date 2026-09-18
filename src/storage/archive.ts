@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { isAbsolute, normalize } from 'node:path';
-import { BrainError } from '../util/errors.js';
+import { BrainError, errnoCode } from '../util/errors.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -62,6 +62,32 @@ export function isUnsafeMemberPath(memberPath: string): boolean {
   return false;
 }
 
+/**
+ * `tar` is an external dependency, and not a universal one.
+ *
+ * It ships with macOS and every Linux distribution, and with Windows 10 1803
+ * and later - but not before that. Reporting a missing binary as a corrupt
+ * archive would send the user looking for a problem with their backup instead
+ * of the one they actually have.
+ */
+export class TarUnavailableError extends BrainError {
+  constructor() {
+    super('TAR_NOT_AVAILABLE', 'Backup and restore need the `tar` command, which was not found.', {
+      details: [
+        'tar ships with macOS, every Linux distribution, and Windows 10 version 1803 or later.',
+      ],
+      hints: [
+        'On Windows: update to a recent Windows 10/11, or install tar (for example via Git for Windows).',
+        'Everything else in Project Brain works without it.',
+      ],
+    });
+  }
+}
+
+function isMissingTar(error: unknown): boolean {
+  return errnoCode(error) === 'ENOENT';
+}
+
 /** List an archive's members and report anything unsafe about them. */
 export async function inspectArchive(archivePath: string): Promise<ArchiveInspection> {
   let listing: string;
@@ -73,6 +99,7 @@ export async function inspectArchive(archivePath: string): Promise<ArchiveInspec
     });
     listing = stdout;
   } catch (error) {
+    if (isMissingTar(error)) throw new TarUnavailableError();
     throw new BrainError('ARCHIVE_UNREADABLE', 'Could not read the archive.', {
       details: [firstLine((error as { stderr?: string }).stderr ?? String(error))],
       hints: ['Check that the file is a gzipped tar archive created by `pb export`.'],
@@ -140,6 +167,7 @@ export async function extractArchiveSafely(
       { timeout: 300_000, maxBuffer: 64 * 1024 * 1024 },
     );
   } catch (error) {
+    if (isMissingTar(error)) throw new TarUnavailableError();
     throw new BrainError('ARCHIVE_EXTRACT_FAILED', 'Could not extract the archive.', {
       details: [firstLine((error as { stderr?: string }).stderr ?? String(error))],
     });
