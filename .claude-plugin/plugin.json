@@ -5,8 +5,14 @@
   "author": {
     "name": "Project Brain contributors"
   },
-  "homepage": "https://github.com/project-brain/project-brain",
-  "repository": "https://github.com/project-brain/project-brain",
+  "homepage": "https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN",
+  "repository": "https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN",
   "license": "MIT",
-  "keywords": ["memory", "projects", "checkpoints", "infrastructure", "local-first"]
+  "keywords": [
+    "memory",
+    "projects",
+    "checkpoints",
+    "infrastructure",
+    "local-first"
+  ]
 }

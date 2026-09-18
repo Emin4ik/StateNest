@@ -6,7 +6,7 @@ all of their work, so the bar is correctness and clarity over speed.
 ## Getting set up
 
 ```bash
-git clone https://github.com/project-brain/project-brain
+git clone https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN
 cd project-brain
 npm install
 npm run build

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://project-brain.dev/schemas/v1/machine.json",
+  "$id": "https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN/blob/main/schemas/v1/machine.json",
   "title": "Project Brain machine",
   "description": "A computer this profile has been used from.",
   "type": "object",

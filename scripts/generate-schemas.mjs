@@ -14,6 +14,7 @@ import {
   SCHEMA_VERSION,
   TaskFileSchema,
 } from '../dist/core/schema.js';
+import { SCHEMA_ID_BASE } from '../dist/core/metadata.js';
 
 /**
  * Publish JSON Schemas for everything Project Brain writes to disk.
@@ -48,7 +49,7 @@ for (const [name, schema, description] of SCHEMAS) {
   const jsonSchema = z.toJSONSchema(schema, { io: 'output' });
   const document = {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
-    $id: `https://project-brain.dev/schemas/v${SCHEMA_VERSION}/${name}.json`,
+    $id: `${SCHEMA_ID_BASE}/v${SCHEMA_VERSION}/${name}.json`,
     title: `Project Brain ${name}`,
     description,
     ...jsonSchema,

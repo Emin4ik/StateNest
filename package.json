@@ -12,6 +12,14 @@
     "git"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN.git"
+  },
+  "homepage": "https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN#readme",
+  "bugs": {
+    "url": "https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN/issues"
+  },
   "type": "module",
   "engines": {
     "node": ">=22.12.0"
@@ -58,6 +66,8 @@
     "check:bytes": "node scripts/check-source-bytes.mjs",
     "verify": "npm run typecheck && npm run lint && npm run check:bytes && npm test && npm run build",
     "schemas": "node scripts/generate-schemas.mjs",
+    "check:metadata": "node scripts/check-metadata.mjs",
+    "metadata:sync": "node scripts/sync-metadata.mjs",
     "verify:package": "node scripts/verify-package.mjs",
     "bench": "node scripts/benchmark.mjs"
   },

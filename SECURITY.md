@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please report security issues privately through
-[GitHub Security Advisories](https://github.com/project-brain/project-brain/security/advisories/new),
+[GitHub Security Advisories](https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN/security/advisories/new),
 not in a public issue.
 
 Include what you did, what happened, and what you expected. A proof of concept

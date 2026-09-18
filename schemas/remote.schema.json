@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://project-brain.dev/schemas/v1/remote.json",
+  "$id": "https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN/blob/main/schemas/v1/remote.json",
   "title": "Project Brain remote",
   "description": "A server a project deploys to. Addresses only, never credentials.",
   "type": "object",

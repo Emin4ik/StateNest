@@ -1,5 +1,6 @@
 import pc from 'picocolors';
 import { isBrainError } from '../util/errors.js';
+import { ISSUES_URL, METADATA_IS_PLACEHOLDER } from '../core/metadata.js';
 
 /**
  * Terminal output.
@@ -104,9 +105,14 @@ export function printError(error: unknown): void {
     process.stderr.write(`${paint.dim(error.stack)}\n`);
   }
   process.stderr.write(
-    `\n${paint.dim('This is probably a bug. Re-run with PROJECT_BRAIN_DEBUG=1 for a stack trace,')}\n` +
-      `${paint.dim('then please report it at https://github.com/project-brain/project-brain/issues')}\n\n`,
+    `\n${paint.dim('This is probably a bug. Re-run with PROJECT_BRAIN_DEBUG=1 for a stack trace.')}\n`,
   );
+  // Before a repository exists there is nowhere to send people. Inventing a URL
+  // would send them to a 404, or worse, to a stranger's issue tracker.
+  if (!METADATA_IS_PLACEHOLDER) {
+    process.stderr.write(`${paint.dim(`Please report it at ${ISSUES_URL}`)}\n`);
+  }
+  process.stderr.write('\n');
 }
 
 // ---------------------------------------------------------------------------

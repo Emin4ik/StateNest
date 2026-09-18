@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://project-brain.dev/schemas/v1/decision.json",
+  "$id": "https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN/blob/main/schemas/v1/decision.json",
   "title": "Project Brain decision",
   "description": "A decision and the reasoning behind it.",
   "type": "object",

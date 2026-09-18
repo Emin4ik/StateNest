@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://project-brain.dev/schemas/v1/tasks.json",
+  "$id": "https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN/blob/main/schemas/v1/tasks.json",
   "title": "Project Brain tasks",
   "description": "A project's next actions.",
   "type": "object",

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://project-brain.dev/schemas/v1/project.json",
+  "$id": "https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN/blob/main/schemas/v1/project.json",
   "title": "Project Brain project",
   "description": "A project: what it is, where it lives, where it deploys.",
   "type": "object",
@@ -134,10 +134,18 @@
             },
             "default_branch": {
               "type": "string"
+            },
+            "previous_identities": {
+              "default": [],
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           "required": [
-            "identity"
+            "identity",
+            "previous_identities"
           ],
           "additionalProperties": {}
         },
