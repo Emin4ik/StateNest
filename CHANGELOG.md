@@ -8,6 +8,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Until 1.0.0, the on-disk data format may change between minor versions.
 Migrations are provided and are never destructive: see `docs/data-model.md`.
 
+## [0.1.2] — 2026-09-18
+
+A correctness patch for multi-machine sync. The sync architecture is unchanged
+— rebase onto the remote, linear history, conflicts surfaced and never
+auto-merged. What is fixed is that StateNest was manufacturing conflicts in its
+own control file.
+
+### Fixed
+
+- **A successful sync no longer leaves the profile repository dirty.** `sync`
+  wrote `sync.last_sync_at` into `profile.yaml` *after* the git sync had already
+  committed and pushed — inside the directory it had just cleaned. Every
+  successful sync therefore ended modified, and `sync status` immediately
+  afterwards reported local uncommitted changes with nothing ahead or behind.
+- **`last_sync_at` is now machine-local.** It records when *this* computer last
+  synced, so two computers sharing a profile each wrote a different value into
+  the same shared line. The second machine to sync hit a `profile.yaml`
+  conflict even when no project data disagreed. Because `profile.yaml` is a
+  control file, the conflict markers then made the profile unreadable, and
+  `projects` answered with the contradictory `No profile named "personal".
+  Available profiles: personal`.
+- **`project_roots` is now machine-local.** The directories a machine scans are
+  machine-specific — `~/Documents` on a Mac, `D:\work` on Windows — but were
+  stored in the shared profile, so whichever machine synced last silently
+  overwrote the others' roots.
+- **Joining a second machine no longer rewrites the shared `created_at`.**
+  Adoption of the remote profile was correct; the CLI then wrote a stale
+  in-memory profile back over it, carrying the joining machine's own
+  `created_at`. The same post-sync write caused both problems, and removing it
+  fixes both.
+- **A conflicted or malformed profile now says so.** An unreadable
+  `profile.yaml` used to be reported as a profile that does not exist. The
+  error now names the file, recognises git conflict markers, and offers
+  `rebase --continue` / `rebase --abort` — and, for `profile.yaml`
+  specifically, says not to delete `~/.statenest` or create a replacement
+  profile, because everything is still there.
+
+### Changed
+
+- Machine-local state lives in `~/.statenest/local/<profile>.json`, outside
+  `profiles/` where sync cannot reach it. Values already present in an existing
+  `profile.yaml` are carried forward on first read, so nothing configured is
+  lost. The profile schema is unchanged and no migration command is needed.
+- A successful sync now has an explicit invariant: it leaves the profile
+  repository clean. This is enforced by integration tests that drive a real
+  bare remote through first push, second-machine adoption, and repeated
+  alternating syncs between two machines.
+
+### Unchanged
+
+- Real conflicts still stop safely. Two machines editing the same record still
+  surface both versions and leave the resolution to you. Nothing is
+  auto-merged, and no automatic conflict resolution was added.
+
+### Upgrading
+
+Machines sharing a profile should all be updated to 0.1.2 before regular sync
+resumes. A machine still running 0.1.1 keeps writing `last_sync_at` into the
+shared profile and can still manufacture the conflict for everyone else.
+
 ## [0.1.1] — 2026-09-18
 
 A patch release driven by real use: dogfooding v0.1.0 across actual projects,
