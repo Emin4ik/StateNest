@@ -76,18 +76,12 @@ letters, UNC paths, case sensitivity), not by execution on those platforms.
 **First push will be the first real test of the matrix.** Expect to fix
 something.
 
-### The resume footer reads as jargon
-
-`pb resume` ends with `Last checkpoint just now. 1 loaded — use --full to read
-them.` "1 loaded" describes the program's internals, not the user's situation.
-Worth one pass over trailing status lines across commands.
-
 ### Undocumented commands
 
-`pb dashboard`, `pb export`, `pb import`, `pb migrate`, `pb add` and `pb remove`
-exist, work and are tested, but are absent from the README's command list. That
-list is a curated subset by design; `export`/`import` in particular deserve a
-mention, because a user who does not know a backup command exists cannot use it.
+`pb dashboard`, `pb migrate`, `pb add` and `pb remove` exist, work and are
+tested, but are absent from the README's command list. That list is a curated
+subset by design, and `export`/`import` have since been added to it; the rest
+are documented only in `--help`.
 
 ---
 
@@ -111,7 +105,7 @@ Everything in this section was executed, not reasoned about.
 
 | Area | Result |
 | --- | --- |
-| Tests | 608 passing, 19 files |
+| Tests | 613 passing, 20 files |
 | Typecheck, lint, control bytes | Clean |
 | Packaged-artifact verification | 41/41 checks pass (`npm run verify:package`) |
 | Schema drift | Generated schemas match the code (9 files) |
@@ -129,9 +123,14 @@ Everything in this section was executed, not reasoned about.
 
 The tarball was installed into a clean prefix with an isolated
 `PROJECT_BRAIN_HOME`, then driven end to end: `init`, `scan`, `projects`,
-`checkpoint`, `resume`, `status`, `search`, `doctor`. All behaved as documented,
-`doctor` reported every check green, and the resume brief correctly surfaced the
-last session's summary, blockers and next actions.
+`checkpoint`, `resume`, `status`, `search`, `doctor`, `export`, `import`. All
+behaved as documented, `doctor` reported every check green, and the resume brief
+correctly surfaced the last session's summary, blockers and next actions. A
+backup written by `pb export` restored into a fresh home with all three projects
+and their checkpoints intact.
+
+This pass found one defect, now fixed: `--yes` meant "assume the default", so on
+every prompt guarding something destructive it cancelled and exited 0.
 
 Separately confirmed: no `pb` command writes anything to `CLAUDE_CONFIG_DIR`.
 Registering the plugin is an explicit `pb integrate claude` step and never a
