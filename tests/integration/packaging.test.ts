@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { cp, mkdtemp, readFile, rm } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CLI_COMMAND, PACKAGE_NAME } from '../../src/core/metadata.js';
@@ -65,6 +65,32 @@ function packedFiles(): Promise<string[]> {
   });
   return packedFilesPromise;
 }
+
+/**
+ * Make sure there is a build to inspect.
+ *
+ * These tests verify build output, and nothing guaranteed it existed. The
+ * suite passed for months on machines that happened to have a stale `dist/`
+ * lying around, and failed on every platform the first time it ran in CI - on
+ * a fresh clone, `npm test` ran before `npm run build`. Ordering between npm
+ * scripts is exactly the kind of dependency that breaks again silently, so the
+ * tests now build if they must rather than assume.
+ */
+beforeAll(async () => {
+  const built = ['dist/cli/bin.js', 'dist-plugin/hook.js', 'dist-plugin/server.js'];
+  if (built.every((file) => existsSync(join(ROOT, file)))) return;
+
+  process.stdout.write('  (no build found — running `npm run build` first)\n');
+  await execFileAsync('npm', ['run', 'build'], {
+    cwd: ROOT,
+    maxBuffer: 64 * 1024 * 1024,
+    shell: process.platform === 'win32',
+  });
+
+  for (const file of built) {
+    if (!existsSync(join(ROOT, file))) throw new Error(`build did not produce ${file}`);
+  }
+}, 300_000);
 
 describe('the published package', () => {
 

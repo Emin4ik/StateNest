@@ -59,7 +59,7 @@
     "prepack": "npm run build",
     "build:plugin": "node scripts/build-plugin.mjs",
     "check:bytes": "node scripts/check-source-bytes.mjs",
-    "verify": "npm run typecheck && npm run lint && npm run check:bytes && npm test && npm run build",
+    "verify": "npm run typecheck && npm run lint && npm run check:bytes && npm run build && npm test",
     "schemas": "node scripts/generate-schemas.mjs",
     "check:schemas": "node scripts/check-schemas.mjs",
     "check:metadata": "node scripts/check-metadata.mjs",

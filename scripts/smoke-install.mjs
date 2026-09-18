@@ -91,20 +91,52 @@ async function main() {
       // Never let a smoke test reach the real Claude Code configuration.
       CLAUDE_CONFIG_DIR: join(scratch, 'claude'),
     };
-    const run = (args, options = {}) =>
+
+    /**
+     * The installed package's own entry point.
+     *
+     * Windows global installs live in `<prefix>/node_modules`; POSIX puts them
+     * in `<prefix>/lib/node_modules`.
+     */
+    const installedEntry = [
+      join(prefix, 'lib', 'node_modules', name, 'dist', 'cli', 'bin.js'),
+      join(prefix, 'node_modules', name, 'dist', 'cli', 'bin.js'),
+    ].find((candidate) => existsSync(candidate));
+    check('the installed package contains the CLI entry point', Boolean(installedEntry));
+    if (!installedEntry) return;
+
+    /**
+     * Run the shim the user actually types.
+     *
+     * Only for arguments that contain no spaces: on Windows the shim is a
+     * `.cmd`, which `execFile` can only reach through a shell, and `shell:
+     * true` joins argv into one string *without quoting*. That is a real trap
+     * and it cost a CI run — `-m "Adjusted the widget tolerances."` arrived as
+     * four separate arguments.
+     */
+    const runShim = (args, options = {}) =>
       execFileAsync(cli, args, { cwd: code, env, shell: WINDOWS, maxBuffer: 32 * 1024 * 1024, ...options });
 
-    // --- the four required commands --------------------------------------
-    const { stdout: version } = await run(['--version']);
-    check('--version prints the package version', version.trim() === pkg.version, version.trim());
+    /** Run the installed entry directly, so arguments survive verbatim. */
+    const run = (args, options = {}) =>
+      execFileAsync(process.execPath, [installedEntry, ...args], {
+        cwd: code,
+        env,
+        maxBuffer: 32 * 1024 * 1024,
+        ...options,
+      });
 
-    const { stdout: help } = await run(['--help']);
-    check('--help lists commands', help.includes('init') && help.includes('doctor'));
+    // --- the four required commands --------------------------------------
+    const { stdout: version } = await runShim(['--version']);
+    check('--version prints the package version (through the shim)', version.trim() === pkg.version, version.trim());
+
+    const { stdout: help } = await runShim(['--help']);
+    check('--help lists commands (through the shim)', help.includes('init') && help.includes('doctor'));
 
     await run(['init', '--yes']);
     check('init created the data directory', existsSync(join(home, '.statenest', 'config.yaml')));
 
-    const { stdout: doctorOut } = await run(['doctor']).catch((error) => ({
+    const { stdout: doctorOut } = await runShim(['doctor']).catch((error) => ({
       stdout: `${error.stdout ?? ''}${error.stderr ?? ''}`,
     }));
     check('doctor runs and reports checks', /Node\.js/.test(doctorOut) && /Data directory/.test(doctorOut));
@@ -112,7 +144,9 @@ async function main() {
     // --- a real project, end to end --------------------------------------
     const project = join(code, 'widget');
     await mkdir(project, { recursive: true });
-    const git = (args) => execFileAsync('git', args, { cwd: project, env, shell: WINDOWS });
+    // No shell: git is a real executable on every platform, and a shell would
+    // re-introduce the quoting problem above.
+    const git = (args) => execFileAsync('git', args, { cwd: project, env });
     await git(['init', '--quiet', '--initial-branch=main']);
     await git(['remote', 'add', 'origin', 'git@github.com:acme/widget.git']);
     await writeFile(join(project, 'README.md'), '# widget\n');
@@ -129,6 +163,14 @@ async function main() {
     const { stdout: resumeOut } = await run(['resume', 'widget'], { cwd: project });
     check('resume shows the checkpoint summary', resumeOut.includes('Adjusted the widget tolerances'));
     check('resume shows the next action', resumeOut.includes('measure again'));
+    // Multi-word arguments must survive as single arguments, not be split on
+    // spaces — the failure mode this script hit on Windows.
+    check(
+      'multi-word arguments arrive intact',
+      resumeOut.includes('Adjusted the widget tolerances.') && !/\bthe\b.*\bwidget\b.*\btolerances\b/.test(
+        resumeOut.replace('Adjusted the widget tolerances.', ''),
+      ),
+    );
 
     const { stdout: json } = await run(['projects', '--json']);
     check('--json emits parseable JSON', (() => {

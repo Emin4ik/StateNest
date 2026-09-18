@@ -37,11 +37,14 @@ jobs:
       - name: Check for raw control bytes in source
         run: npm run check:bytes
 
-      - name: Test
-        run: npm test
-
+      # Build before test: the packaging tests inspect build output. They now
+      # build on demand if it is missing, but doing it here keeps the ordering
+      # honest and the failure legible.
       - name: Build
         run: npm run build
+
+      - name: Test
+        run: npm test
 
       - name: Verify the CLI runs from the build
         shell: bash
