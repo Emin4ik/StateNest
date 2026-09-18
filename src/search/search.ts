@@ -1,6 +1,7 @@
 import type { Store } from '../storage/store.js';
 import type { Project } from '../core/schema.js';
 import type { Timestamp } from '../util/time.js';
+import { redactSecrets } from '../security/redact.js';
 
 /**
  * Local lexical search.
@@ -231,7 +232,37 @@ export async function search(
     }),
   );
 
-  return hits.sort((a, b) => b.score - a.score || (b.timestamp ?? '').localeCompare(a.timestamp ?? '')).slice(0, limit);
+  const ranked = hits
+    .sort((a, b) => b.score - a.score || (b.timestamp ?? '').localeCompare(a.timestamp ?? ''))
+    .slice(0, limit);
+
+  // Every text field of a result is stored text on its way to a terminal, a
+  // dashboard or a model - the excerpt AND the project name it is attributed
+  // to, which is itself user-controlled. Redacting only the returned page keeps
+  // this off the hot path while covering everything a caller can see.
+  return ranked.map((hit) => {
+    const excerpt = redactSecrets(hit.excerpt);
+    const projectName = hit.projectName === null ? null : redactSecrets(hit.projectName);
+    const label = redactSecrets(hit.label);
+
+    if (
+      excerpt.findings.length === 0 &&
+      (projectName?.findings.length ?? 0) === 0 &&
+      label.findings.length === 0
+    ) {
+      return hit;
+    }
+
+    return {
+      ...hit,
+      excerpt: excerpt.text,
+      projectName: projectName?.text ?? null,
+      label: label.text,
+      // Highlight offsets refer to the original string, so they are dropped
+      // rather than left pointing into shifted text.
+      highlights: excerpt.findings.length === 0 ? hit.highlights : [],
+    };
+  });
 }
 
 /** Split a query into terms, honouring "quoted phrases". */

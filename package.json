@@ -58,7 +58,8 @@
     "check:bytes": "node scripts/check-source-bytes.mjs",
     "verify": "npm run typecheck && npm run lint && npm run check:bytes && npm test && npm run build",
     "schemas": "node scripts/generate-schemas.mjs",
-    "verify:package": "node scripts/verify-package.mjs"
+    "verify:package": "node scripts/verify-package.mjs",
+    "bench": "node scripts/benchmark.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

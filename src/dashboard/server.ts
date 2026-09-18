@@ -6,6 +6,7 @@ import { search } from '../search/search.js';
 import { renderPage } from './page.js';
 import { BrainError } from '../util/errors.js';
 import { relativeTime } from '../util/time.js';
+import { redactSecrets } from '../security/redact.js';
 import type { Workspace } from '../core/workspace.js';
 import type { Project } from '../core/schema.js';
 
@@ -167,8 +168,8 @@ async function handle(
       sendJson(response, 200, {
         project: {
           id: project.id,
-          name: project.name,
-          description: project.description ?? null,
+          name: scrub(project.name),
+          description: project.description ? scrub(project.description) : null,
           status: project.status,
           type: project.type,
           tags: project.tags,
@@ -296,7 +297,11 @@ async function buildOverview(workspace: Workspace, registry: Registry) {
     },
     blocked: projects
       .filter((project) => project.blockers.length > 0)
-      .map((project) => ({ name: project.name, id: project.id, blockers: project.blockers })),
+      .map((project) => ({
+        name: scrub(project.name),
+        id: project.id,
+        blockers: project.blockers.map(scrub),
+      })),
   };
 }
 
@@ -310,13 +315,15 @@ async function projectSummaries(workspace: Workspace, registry: Registry) {
     .sort((a, b) => (b.last_activity_at ?? '').localeCompare(a.last_activity_at ?? ''))
     .map((project: Project) => ({
       id: project.id,
-      name: project.name,
-      description: project.description ?? null,
+      // Redacted on the way out as well as on the way in: a value written by an
+      // older build or a hand edit must not reach a browser page.
+      name: scrub(project.name),
+      description: project.description ? scrub(project.description) : null,
       status: project.status,
       type: project.type,
       last_activity: relativeTime(project.last_activity_at),
-      current_focus: project.current_focus ?? null,
-      blockers: project.blockers,
+      current_focus: project.current_focus ? scrub(project.current_focus) : null,
+      blockers: project.blockers.map(scrub),
       web_url: project.repository?.web_url ?? null,
       locations: project.local_locations.map((location) => ({
         machine: machineNames.get(location.machine_id) ?? location.machine_id,
@@ -326,6 +333,11 @@ async function projectSummaries(workspace: Workspace, registry: Registry) {
       })),
       environments: [...new Set(project.deployments.map((d) => d.environment))],
     }));
+}
+
+/** Stored text on its way to a browser gets the same treatment as on write. */
+function scrub(value: string): string {
+  return redactSecrets(value).text;
 }
 
 function sendJson(response: ServerResponse, status: number, body: unknown): void {

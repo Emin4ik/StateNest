@@ -11,6 +11,66 @@ import type {
 import { relativeTime, type Timestamp } from '../util/time.js';
 import { contractHome } from '../util/paths.js';
 import { extractSections } from '../storage/frontmatter.js';
+import { redactSecrets } from '../security/redact.js';
+
+/**
+ * Redact stored prose on the way out, not only on the way in.
+ *
+ * The write path already scrubs anything Project Brain persists, but that only
+ * protects data this build wrote. Text can reach `state.md` or a checkpoint
+ * another way: a hand edit, a sync from a machine running an older version, or
+ * a build that predates the scanner. Trusting it because it is already on disk
+ * is exactly how a credential ends up in the context injected into a model, or
+ * on a dashboard page.
+ *
+ * So everything assembled here is scrubbed again. Redacting twice is cheap;
+ * these are short strings and there are a few dozen of them.
+ */
+function scrub(value: string): string {
+  return redactSecrets(value).text;
+}
+
+function scrubAll(values: readonly string[]): string[] {
+  return values.map(scrub);
+}
+
+/**
+ * Scrub every text field of a checkpoint, `body` included.
+ *
+ * `body` is the raw markdown, and it is the field most easily forgotten: the
+ * extracted sections were being redacted while the prose they came from was
+ * passed through untouched, which leaked through `pb recent`.
+ */
+/**
+ * Scrub the free-text fields of a project record.
+ *
+ * The brief carries the whole project object, and consumers reach into it for
+ * the name and description. Scrubbing those here makes the brief safe by
+ * construction rather than requiring every caller - CLI, MCP, dashboard, hook -
+ * to remember to do it.
+ */
+function scrubProject(project: Project): Project {
+  return {
+    ...project,
+    name: scrub(project.name),
+    ...(project.description ? { description: scrub(project.description) } : {}),
+    ...(project.current_focus ? { current_focus: scrub(project.current_focus) } : {}),
+    ...(project.notes ? { notes: scrub(project.notes) } : {}),
+    blockers: scrubAll(project.blockers),
+  };
+}
+
+function scrubCheckpoint(checkpoint: Checkpoint): Checkpoint {
+  return {
+    ...checkpoint,
+    summary: scrub(checkpoint.summary),
+    completed: scrubAll(checkpoint.completed),
+    decisions: scrubAll(checkpoint.decisions),
+    blockers: scrubAll(checkpoint.blockers),
+    next: scrubAll(checkpoint.next),
+    body: scrub(checkpoint.body),
+  };
+}
 
 /**
  * The shared answer to "where was I?".
@@ -84,7 +144,7 @@ export async function buildResumeBrief(
   );
 
   return {
-    project,
+    project: scrubProject(project),
     lastActivityAt,
     lastActivityRelative: relativeTime(lastActivityAt),
     hereLocation: here,
@@ -95,21 +155,34 @@ export async function buildResumeBrief(
       ...(deployment.path ? { path: deployment.path } : {}),
       ...(deployment.branch ? { branch: deployment.branch } : {}),
     })),
-    currentFocus: project.current_focus ?? sectionText(stateSections, 'current focus') ?? null,
+    currentFocus: scrubNullable(
+      project.current_focus ?? sectionText(stateSections, 'current focus') ?? null,
+    ),
     stateSections,
-    recentlyCompleted: collectRecent(checkpoints, (checkpoint) => checkpoint.completed, 6),
-    blockers: dedupe([
-      ...project.blockers,
-      ...collectRecent(checkpoints, (checkpoint) => checkpoint.blockers, 4),
-      ...openTasks.filter((task) => task.status === 'blocked').map((task) => task.text),
-    ]).slice(0, 6),
-    nextActions: dedupe([
-      ...openTasks.filter((task) => task.status !== 'blocked').map((task) => task.text),
-      ...collectRecent(checkpoints, (checkpoint) => checkpoint.next, 4),
-    ]).slice(0, 8),
-    openTasks,
-    keyDecisions: decisions.filter((decision) => !decision.superseded_by).slice(0, options.decisionLimit ?? 5),
-    checkpoints,
+    recentlyCompleted: scrubAll(collectRecent(checkpoints, (checkpoint) => checkpoint.completed, 6)),
+    blockers: scrubAll(
+      dedupe([
+        ...project.blockers,
+        ...collectRecent(checkpoints, (checkpoint) => checkpoint.blockers, 4),
+        ...openTasks.filter((task) => task.status === 'blocked').map((task) => task.text),
+      ]).slice(0, 6),
+    ),
+    nextActions: scrubAll(
+      dedupe([
+        ...openTasks.filter((task) => task.status !== 'blocked').map((task) => task.text),
+        ...collectRecent(checkpoints, (checkpoint) => checkpoint.next, 4),
+      ]).slice(0, 8),
+    ),
+    openTasks: openTasks.map((task) => ({ ...task, text: scrub(task.text) })),
+    keyDecisions: decisions
+      .filter((decision) => !decision.superseded_by)
+      .slice(0, options.decisionLimit ?? 5)
+      .map((decision) => ({
+        ...decision,
+        title: scrub(decision.title),
+        ...(decision.reason ? { reason: scrub(decision.reason) } : {}),
+      })),
+    checkpoints: checkpoints.map(scrubCheckpoint),
   };
 }
 
@@ -222,11 +295,11 @@ export async function buildRecent(
 
       if (checkpoint) {
         entries.push({
-          project,
+          project: scrubProject(project),
           timestamp: checkpoint.meta.timestamp,
-          summary: firstLine(checkpoint.summary) || 'checkpoint recorded',
+          summary: scrub(firstLine(checkpoint.summary)) || 'checkpoint recorded',
           source: 'checkpoint',
-          checkpoint,
+          checkpoint: scrubCheckpoint(checkpoint),
         });
         return;
       }
@@ -238,9 +311,9 @@ export async function buildRecent(
       if (!activity) return;
 
       entries.push({
-        project,
+        project: scrubProject(project),
         timestamp: activity,
-        summary: project.current_focus ?? 'no checkpoint yet',
+        summary: project.current_focus ? scrub(project.current_focus) : 'no checkpoint yet',
         source: 'activity',
         checkpoint: null,
       });
@@ -291,6 +364,10 @@ function dedupe(items: readonly string[]): string[] {
     out.push(item.trim());
   }
   return out;
+}
+
+function scrubNullable(value: string | null): string | null {
+  return value === null ? null : scrub(value);
 }
 
 function sectionText(sections: Map<string, string>, name: string): string | null {

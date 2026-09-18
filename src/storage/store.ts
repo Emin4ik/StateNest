@@ -205,9 +205,15 @@ export class Store {
     projectId: string,
     options: { limit?: number; since?: Timestamp } = {},
   ): Promise<Checkpoint[]> {
-    const files = await this.listCheckpointFiles(projectId, options);
-    const checkpoints: Checkpoint[] = [];
+    // Ask the walker for a few more than needed: an unreadable file must not
+    // silently shorten the result, and reading two extra paths is far cheaper
+    // than walking the whole history.
+    const files = await this.listCheckpointFiles(projectId, {
+      ...options,
+      ...(options.limit ? { limit: options.limit + 2 } : {}),
+    });
 
+    const checkpoints: Checkpoint[] = [];
     for (const file of files) {
       const checkpoint = await this.readCheckpointFile(file);
       if (!checkpoint) continue;
@@ -219,28 +225,45 @@ export class Store {
     return checkpoints;
   }
 
-  /** Checkpoint file paths for a project, newest first. */
+  /**
+   * Checkpoint file paths for a project, newest first.
+   *
+   * `limit` stops the walk early, which is the whole point of sharding by date:
+   * reading the three most recent checkpoints should cost three directory
+   * reads, not one per day the project has ever been worked on. Without it a
+   * project with two years of history made the Claude Code session brief six
+   * times slower than one started yesterday - and long-lived projects are
+   * exactly who this tool is for.
+   */
   async listCheckpointFiles(
     projectId: string,
-    options: { since?: Timestamp } = {},
+    options: { since?: Timestamp; limit?: number } = {},
   ): Promise<string[]> {
     const root = this.paths.checkpointDir(projectId);
     const sinceYmd = options.since ? options.since.slice(0, 10).split('-') : null;
+    const limit = options.limit ?? Number.POSITIVE_INFINITY;
 
     const years = await listDirectories(root);
     const files: string[] = [];
 
     for (const year of years.sort().reverse()) {
+      if (files.length >= limit) break;
       if (sinceYmd && year < sinceYmd[0]!) break;
+
       const months = await listDirectories(join(root, year));
       for (const month of months.sort().reverse()) {
+        if (files.length >= limit) break;
         if (sinceYmd && year === sinceYmd[0] && month < sinceYmd[1]!) break;
+
         const days = await listDirectories(join(root, year, month));
         for (const day of days.sort().reverse()) {
+          if (files.length >= limit) break;
           if (sinceYmd && year === sinceYmd[0] && month === sinceYmd[1] && day < sinceYmd[2]!) break;
+
           const dayFiles = await listFiles(join(root, year, month, day), '.md');
           for (const file of dayFiles.sort().reverse()) {
             files.push(join(root, year, month, day, file));
+            if (files.length >= limit) break;
           }
         }
       }

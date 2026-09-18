@@ -136,7 +136,10 @@ export function importCommand(): Command {
         await mkdir(staging, { recursive: true });
 
         try {
-          await execFileAsync('tar', ['-xzf', archive, '-C', staging], { timeout: 300_000 });
+          // Validated member by member before anything is written: an archive
+          // that could escape the staging directory is rejected outright.
+          const { extractArchiveSafely } = await import('../../storage/archive.js');
+          await extractArchiveSafely(archive, staging);
 
           const { listDirectories } = await import('../../storage/store.js');
           const roots = await listDirectories(staging);
@@ -148,7 +151,14 @@ export function importCommand(): Command {
           const { join } = await import('node:path');
           await mkdir(paths.home, { recursive: true });
           for (const root of roots) {
-            await cp(join(staging, root), paths.home, { recursive: true, force: true });
+            // `dereference: false` copies a symlink as a symlink rather than
+            // following it, so a link that somehow survived validation cannot
+            // cause a write through it to land outside the home.
+            await cp(join(staging, root), paths.home, {
+              recursive: true,
+              force: true,
+              dereference: false,
+            });
           }
 
           // The importing machine keeps its own identity; the archive does not
