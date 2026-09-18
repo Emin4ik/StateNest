@@ -83,7 +83,7 @@ repository:
 
 local_locations:
   - machine_id: machine_30cmfcaqe5
-    path: /Users/emin/Projects/world-war
+    path: /Users/dev/Projects/world-war
     is_worktree: false
     branch: phase-7
     head: 3a57a914c7f8...

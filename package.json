@@ -1,18 +1,18 @@
 {
   "name": "statenest",
   "version": "0.2.0",
-  "description": "Local-first project memory and developer control plane: remembers your projects, machines, deployments and where you left off, and hands that context to your coding agent.",
+  "description": "A local-first memory and control layer for coding agents. Recognises the git repository you open your agent in, restores what you were doing, records what the session achieved, and syncs it across your machines through a private git repository you own.",
   "keywords": [
-    "cli",
-    "developer-tools",
-    "project-memory",
-    "project-management",
     "coding-agent",
     "ai-agents",
     "claude-code",
     "mcp",
     "local-first",
-    "git"
+    "developer-memory",
+    "project-context",
+    "multi-machine",
+    "developer-tools",
+    "cli"
   ],
   "license": "MIT",
   "repository": {

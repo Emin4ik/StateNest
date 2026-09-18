@@ -7,13 +7,15 @@ For the complete list of commands and options, see the
 
 ## 1. The mental model
 
-StateNest is a **local-first control plane for your own work**. It is a memory
-of what you are doing across every project, machine and server you have — kept
-in plain files on your computer.
+StateNest is a **local-first memory and control layer for coding agents**. It
+holds what you are doing across every project, machine and server you have — in
+plain files on your computer — and hands the relevant part to your agent at the
+moment a session starts.
 
 It is not a note-taking app, not a task manager, and not a chat-history
 archive. The one question it exists to answer is _"what was I doing, where, and
-what did I decide?"_ — weeks later, on whichever machine you happen to be at.
+what did I decide?"_ — weeks later, on whichever machine you happen to be at,
+and asked by you or by the agent working alongside you.
 
 ### What it connects
 
@@ -118,6 +120,15 @@ working directory. `task`, `decision` and `checkpoint` all accept
 
 ## 3. Finding your projects
 
+### Usually, you do not
+
+If the Claude Code integration is installed, opening Claude Code inside a git
+repository with a hosted remote registers it. That covers the ordinary case, and
+it is described in [What happens on its own](#8-what-happens-on-its-own).
+
+The commands below are for the rest: registering things in bulk, or registering
+a repository that is not eligible for automatic recognition.
+
 ### The three ways in
 
 ```bash
@@ -129,6 +140,10 @@ statenest scan .                # walk the current directory
 `add` registers **one** directory you name. `scan` **walks a tree** and
 registers everything that looks like a project. `scan .` is just `scan` pointed
 at where you are — it is not special.
+
+`add` is also how you register a repository automatic recognition skips: one
+with no remote, or whose remote is a local path rather than a hosted
+repository.
 
 ### How `scan` actually works
 
@@ -293,16 +308,25 @@ checkpoint right now, a deployment lookup mid-conversation.
 **The first time:**
 
 ```bash
-statenest init
-statenest scan ~/Projects
-statenest projects
+statenest setup
 ```
 
-**Starting work:**
+**Every time after that:**
 
 ```bash
 cd ~/Projects/example
 claude                          # context arrives automatically
+```
+
+That is the whole loop. Registering the project, capturing what the session
+achieved and syncing it to your other machines all happen without being asked.
+
+**Optionally, once**, if you want everything you already have registered at once
+rather than as you open each project:
+
+```bash
+statenest scan ~/Projects
+statenest projects
 ```
 
 **During or after something important:**

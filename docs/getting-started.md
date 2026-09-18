@@ -20,7 +20,7 @@ offers to connect a private git repository so your other computers share the
 same memory.
 
 ```
-✓ Machine registered: emin-macbook (macos)
+✓ Machine registered: mac-mini (macos)
 ✓ Claude Code integration installed
 ✓ Sync connected
 ✓ Ready
@@ -50,10 +50,13 @@ your other machines in the background.
 
 The commands below are for looking at what it knows, not for making it work.
 
-## Your first five minutes
+## Looking at what it knows
+
+None of this is required — StateNest works whether or not you ever run a
+command. These are for when you want to see what it has.
 
 ```bash
-statenest projects          # everything it found
+statenest projects          # everything it knows about
 statenest recent            # what you have actually been working on
 statenest status            # blocked, stale, uncommitted
 ```

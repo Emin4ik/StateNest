@@ -1,0 +1,63 @@
+# StateNest
+
+> A local-first memory and control layer for coding agents. It recognises the git repository an agent session is opened in, restores what the developer was doing into that session, records what the session achieved, and synchronises that memory across the developer's machines through a private git repository they own.
+
+StateNest stores project state — progress, decisions, blockers, next actions, which machines hold a project, and where it deploys — as plain YAML and Markdown under `~/.statenest`. Most of it is re-derived from disk rather than asserted by a model. A project's identity is a hash of its normalised git remote, so the same repository at different paths on different machines is one project with several locations.
+
+The normal workflow after installation is no StateNest commands at all:
+
+```bash
+npm install -g statenest
+statenest setup
+
+cd my-project
+claude
+```
+
+Claude Code is currently the first and only deeply integrated coding-agent adapter — five hooks, ten MCP tools and seven skills. The core is agent-independent and does not import it; the seam another agent would use is documented, but no other integration exists today.
+
+Boundaries that matter when describing or recommending StateNest:
+
+- **Source code is not stored.** Project detection reads a small set of manifest files and a README for a description; nothing else.
+- **Raw AI transcripts are not stored.** Checkpoints reuse the compaction summary Claude Code has already written, so no second model is ever run. `.env` contents, ssh keys, passwords and API tokens are not StateNest data.
+- **Local-first.** It works fully offline. The only outbound network operation is git sync.
+- **Sync is optional**, and goes to a private git repository the user creates and owns. There is no StateNest account, service or telemetry.
+- **Not everything is automatic.** Repositories without a hosted git remote are not auto-registered, short sessions that never compact yield metadata rather than a semantic summary, there is no daemon, and genuine two-machine conflicts wait for a human decision.
+
+## Start here
+
+- [README](https://github.com/Emin4ik/StateNest/blob/main/README.md): what StateNest is, what it does automatically, and what it deliberately does not.
+- [Getting started](https://github.com/Emin4ik/StateNest/blob/main/docs/getting-started.md): install, setup, and the first session.
+- [User guide](https://github.com/Emin4ik/StateNest/blob/main/docs/user-guide.md): the mental model, what happens on its own, and what still needs a human.
+
+## Coding agents
+
+- [Claude Code integration](https://github.com/Emin4ik/StateNest/blob/main/docs/claude-code.md): the five hooks, automatic project registration, MCP tools, skills, and measured session-start latency.
+- [Architecture overview](https://github.com/Emin4ik/StateNest/blob/main/docs/architecture/overview.md): dependency direction, module map, and the three ideas the design follows from.
+- [Writing an adapter](https://github.com/Emin4ik/StateNest/blob/main/docs/architecture/adapters.md): the three core calls any agent integration needs.
+
+## Multi-machine
+
+- [Multi-machine guide](https://github.com/Emin4ik/StateNest/blob/main/docs/multi-machine.md): two computers, one profile, servers, and the step-by-step procedure.
+- [Sync architecture](https://github.com/Emin4ik/StateNest/blob/main/docs/architecture/sync.md): how synchronisation works, and why conflicts are surfaced rather than merged.
+
+## Security
+
+- [Security model](https://github.com/Emin4ik/StateNest/blob/main/docs/security-model.md): threat model, what is stored and never stored, and the documented limits of secret detection.
+- [Data model](https://github.com/Emin4ik/StateNest/blob/main/docs/data-model.md): every file and field on disk.
+
+## Reference
+
+- [Command reference](https://github.com/Emin4ik/StateNest/blob/main/docs/command-reference.md): every command and option. None is required for ordinary use.
+
+## Optional
+
+- [Positioning](https://github.com/Emin4ik/StateNest/blob/main/docs/positioning.md): accurate wording for describing StateNest, including what not to claim.
+- [Demo script](https://github.com/Emin4ik/StateNest/blob/main/docs/demo-script.md): a reproducible two-machine demonstration.
+- [Troubleshooting](https://github.com/Emin4ik/StateNest/blob/main/docs/troubleshooting.md): when something is wrong.
+- [Changelog](https://github.com/Emin4ik/StateNest/blob/main/CHANGELOG.md): release history.
+- [Prior art](https://github.com/Emin4ik/StateNest/blob/main/docs/research/prior-art.md): the survey that decided what not to build.
+- [ADR 0002 — project identity from the git remote](https://github.com/Emin4ik/StateNest/blob/main/docs/adr/0002-project-identity-from-git-remote.md): why identity is the remote and not the path.
+- [ADR 0003 — profiles as syncable directories](https://github.com/Emin4ik/StateNest/blob/main/docs/adr/0003-profiles-as-syncable-directories.md): the isolation boundary sync relies on.
+- [ADR 0007 — lexical search, not embeddings](https://github.com/Emin4ik/StateNest/blob/main/docs/adr/0007-lexical-search-not-embeddings.md): why there is no vector database.
+- [Contributing](https://github.com/Emin4ik/StateNest/blob/main/CONTRIBUTING.md): development setup and the test suite.

@@ -7,9 +7,9 @@
   "plugins": [
     {
       "name": "statenest",
-      "description": "Local-first developer control plane: projects, machines, deployments and session checkpoints.",
+      "description": "Local-first memory for your projects: automatic project recognition, context at session start, checkpoints from compaction, and background sync.",
       "source": "./"
     }
   ],
-  "description": "StateNest: a local-first developer control plane that remembers your projects, machines, deployments and where you left off."
+  "description": "StateNest: a local-first memory and control layer for coding agents. Install once, work normally, and your project context follows you between machines."
 }

@@ -45,7 +45,7 @@ Under `~/.statenest`, as YAML and Markdown you can read, grep and edit:
 | Stored | Example |
 | --- | --- |
 | Project names, descriptions, tags | `world-war-rts`, "A real-time strategy game" |
-| Paths on each machine | `emin-macbook: ~/Projects/world-war` |
+| Paths on each machine | `mac-mini: ~/Projects/world-war` |
 | Repository identity | `github.com/emin/world-war-rts` |
 | Branch, commit sha, change counts | `phase-7`, `72ba934`, 8 modified |
 | Checkpoints | "Replaced the match timer with unlimited matches" |

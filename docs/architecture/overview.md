@@ -1,8 +1,9 @@
 # Architecture
 
-StateNest is a local-first CLI with adapters. Everything it knows lives in
-plain YAML and Markdown under `~/.statenest`, and every feature is built on
-a core that has no idea Claude Code exists.
+StateNest is a local-first memory layer for coding agents, reached through
+adapters and a CLI. Everything it knows lives in plain YAML and Markdown under
+`~/.statenest`, and every feature is built on a core that has no idea Claude
+Code exists — the Claude adapter is the first one, not the architecture.
 
 ## Dependency direction
 
