@@ -1,166 +1,131 @@
 # Release readiness
 
-Assessed 2026-09-18 against the current tree.
+Assessed 2026-09-18 against the current tree, after the rename to StateNest and
+the first real CI runs.
 
-**Status: NOT READY.** Two blockers, both about identity rather than code. The
-software is in good shape; it does not yet have a name it is allowed to use or
-a repository to live in.
+**Status: ready, pending the owner's decision to publish.** The two blockers
+that held v0.1.0 — an unusable name and no repository identity — are resolved,
+and the cross-platform matrix has now actually executed rather than merely
+existing as YAML.
 
 Run `npm run release:check` for the machine-checkable half of this document. It
-exits non-zero today, on the blockers below.
+exits 0.
 
 ---
 
 ## Blockers
 
-Nothing may be published while any of these stands.
+**None.**
 
-### 1. The project name is not available
+For the record, the two that stood until this phase:
 
-`statenest` is taken on npm by an actively maintained product in this same
-category — v0.30.0, 57 versions, ~914 downloads a week, describing itself as a
-"local-first MCP server that gives AI tools semantic memory of your codebase."
-It is not a squat that can be disputed. Separately, `getprojectbrain.com` is a
-paid commercial app using the literal name and marketed at developers, which is
-the profile of a trademark complainant; `Ethan-YS/statenest` (172★) is a
-direct conceptual competitor under the exact name; and "project brain" has
-become the generic phrase other projects use to describe this category.
+1. **The name.** `project-brain` was taken on npm by an actively maintained
+   product in the same category, a paid commercial app used the literal name,
+   and the phrase had become the generic term for the category. Resolved: the
+   owner chose **StateNest**, verified free on npm, PyPI, Homebrew, Arch, the
+   AUR, PATH and GitHub before anything was renamed
+   ([final-name-selection.md](research/final-name-selection.md)).
+2. **No repository owner.** Resolved:
+   [Emin4ik/StateNest](https://github.com/Emin4ik/StateNest), public, MIT,
+   default branch `main`.
 
-Evidence and ten researched alternatives: [research/project-name.md](research/project-name.md).
-Recommended: **Projectory**, free on npm, Homebrew and PATH.
-
-**Resolution:** choose a name, edit [src/core/metadata.ts](../src/core/metadata.ts),
-run `npm run metadata:sync`, `npm run build && npm run schemas`, then
-`npm run check:metadata`.
-
-### 2. No repository owner
-
-`package.json`, both plugin manifests, the generated schema `$id` values,
-SECURITY.md and CONTRIBUTING.md all point at
-`https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN`. That placeholder is
-deliberately not plausible-looking, so it cannot quietly ship; a realistic
-placeholder is the one that survives into a release and sends users to a
-stranger's namespace.
-
-Consequences while unresolved: the SECURITY.md vulnerability-reporting link does
-not resolve, the CLI's crash handler deliberately prints no "report it at" URL,
-and CI has never run — there is no remote to run it on.
-
-**Resolution:** same four commands as above. `check:metadata` verifies every
-consumer agrees and fails while `METADATA_IS_PLACEHOLDER` is true.
+Nothing has been published to npm, and no tag or GitHub Release exists. That is
+the owner's call.
 
 ---
 
 ## Important
 
-Should be resolved before or immediately alongside the first release, but none
-of these makes the software unsafe to use.
-
-### The display name is not covered by the rename automation
-
-`metadata:sync` rewrites package names, URLs and manifests. It deliberately does
-not rewrite "StateNest" as it appears in README prose, `docs/`, the CLI
-banner and the plugin description — that is a wide, mostly mechanical diff that
-should be done deliberately in one commit once a name is chosen, not smuggled in
-by a script.
-
-### CI has never executed
-
-`.github/workflows/ci.yml` defines three jobs — a 6-cell test matrix
-(Ubuntu/macOS/Windows × Node 22.12/24), a packaging job, and the release gate.
-Every step has been run locally on macOS, but the workflow itself has never run
-on GitHub because there is no remote. Windows and Linux behaviour is covered by
-torture tests that simulate platform differences (path separators, drive
-letters, UNC paths, case sensitivity), not by execution on those platforms.
-
-**First push will be the first real test of the matrix.** Expect to fix
-something.
-
-### Undocumented commands
-
-`statenest dashboard`, `statenest migrate`, `statenest add` and `statenest remove` exist, work and are
-tested, but are absent from the README's command list. That list is a curated
-subset by design, and `export`/`import` have since been added to it; the rest
-are documented only in `--help`.
+- **`npm publish` has never been rehearsed against the real registry.** The
+  tarball has been built, installed from disk and driven on three platforms, but
+  a publish is still a first.
+- **No provenance.** Publishing with `npm publish --provenance` from CI would
+  let users verify the tarball was built from the commit it claims. Worth doing
+  on the first publish rather than retrofitting.
+- **No recorded demo.** `npm run demo` is deterministic and safe to record
+  (invented data, throwaway home, fixed machine name), but no recording exists,
+  so the README still asks readers to take its console blocks on trust.
+- **Branch protection is off.** Appropriate now that CI is known-good, but it
+  changes the owner's own push workflow, so it has deliberately not been enabled
+  without asking.
 
 ---
 
 ## Nice to have
 
-- **Provenance.** Publishing with `npm publish --provenance` from CI would let
-  users verify the tarball was built from the commit it claims.
-- **A recorded demo.** The README's value depends on three console blocks that a
-  reader must take on trust. An asciinema recording of a real session would do
-  more than any paragraph.
-- **Homebrew formula.** `npm install -g` is the only install path today.
-- **Migration test against real pre-release data.** `statenest migrate` is tested
-  against synthesised v0 records; nobody has yet migrated a directory that grew
-  organically over months.
+- Homebrew formula; `npm install -g` is the only install path.
+- `statenest dashboard`, `migrate`, `add` and `remove` are documented only in
+  `--help`.
+- `statenest migrate` has only been exercised against synthesised v0 records.
+- A short CLI alias. `statenest` is nine characters and typed often; nothing
+  claims `sn`, but adding an alias is a product decision, not an engineering one.
 
 ---
 
 ## What was verified
 
-Everything in this section was executed, not reasoned about.
+Everything here was executed.
 
 | Area | Result |
 | --- | --- |
-| Tests | 617 passing, 21 files |
-| Typecheck, lint, control bytes | Clean |
-| Packaged-artifact verification | 41/41 checks pass (`npm run verify:package`) |
+| Tests | 638 passing, 24 files |
+| Local release gate | `npm run release:check` exits 0 |
+| GitHub Actions | Full matrix green — see below |
+| Packaged-artifact verification | 41/41 (`npm run verify:package`) |
+| Packaged install, per OS | Ubuntu, macOS, Windows (`npm run smoke:install` in CI) |
 | Schema drift | Generated schemas match the code (9 files) |
 | `npm audit --omit=dev` | 0 vulnerabilities |
-| Runtime dependencies | 4 — commander, picocolors, yaml, zod. None has a dependency of its own |
-| Install-time scripts | None in the production tree |
-| Licenses | All MIT / ISC / BSD across the tree; project is MIT |
-| Real install footprint | 4 packages, 13 MB, from a 584 KB tarball |
-| Session-start latency | ~91 ms p50, flat from 10 to 500 projects (`npm run bench`) |
-| Context brief size | 603 bytes |
+| Runtime dependencies | 4 — commander, picocolors, yaml, zod; none has a dependency of its own |
+| Install-time scripts | None across the 4 production packages |
+| Licenses | MIT / ISC / BSD throughout; project is MIT |
+| Release artifact | `statenest-0.1.0.tgz`, 507 KB compressed, 2.37 MB unpacked, 186 files |
+| Security suites | 175 tests across redaction, leakage, traversal, injection, isolation |
+| Claude integration | Installed, verified and removed from a packed tarball into an isolated `CLAUDE_CONFIG_DIR` |
+| Session-start latency | Flat from 10 to 500 projects (see Performance) |
 | Documentation links | No broken relative links |
-| Test isolation | Full suite run against a snapshot of `~/.claude`, `~/.ssh`, `~/.statenest`, `~/.gitconfig` and `~/.config/gh`: nothing changed except two files written by the host coding agent itself |
 
-### Acceptance pass on the packaged artifact
+### Real CI
 
-The tarball was installed into a clean prefix with an isolated
-`STATENEST_HOME`, then driven end to end: `init`, `scan`, `projects`,
-`checkpoint`, `resume`, `status`, `search`, `doctor`, `export`, `import`. All
-behaved as documented, `doctor` reported every check green, and the resume brief
-correctly surfaced the last session's summary, blockers and next actions. A
-backup written by `statenest export` restored into a fresh home with all three projects
-and their checkpoints intact.
+The matrix is no longer hypothetical. Every job below ran on GitHub Actions:
 
-The Claude Code integration was then installed from that packaged artifact into
-an isolated `CLAUDE_CONFIG_DIR`, confirmed active by both `statenest integrate status`
-and `statenest doctor`, removed with `statenest integrate remove claude`, and confirmed gone.
-Everything it wrote landed in the isolated directory; the real `~/.claude` was
-untouched, verified by timestamp before and after.
+| Job | Result |
+| --- | --- |
+| ubuntu-latest / node 22.12 | pass |
+| ubuntu-latest / node 24 | pass |
+| macos-latest / node 22.12 | pass |
+| macos-latest / node 24 | pass |
+| windows-latest / node 22.12 | pass |
+| windows-latest / node 24 | pass |
+| Package / ubuntu-latest | pass |
+| Package / macos-latest | pass |
+| Package / windows-latest | pass |
+| Release gate | pass |
 
-This pass found three defects, all now fixed:
+The first run failed every cell. The causes and fixes are in the phase report
+and the commit history; Windows alone accounted for 290 failures traced to a
+single path-comparison bug.
 
-1. `--yes` meant "assume the default", so on every prompt guarding something
-   destructive it cancelled and exited 0.
-2. `CLAUDE_CONFIG_DIR` was ignored when reading Claude Code's state, so
-   `statenest doctor` reported on the real `~/.claude` even when pointed elsewhere —
-   and CONTRIBUTING.md's instruction to use a scratch directory did not protect
-   anyone who followed it.
-3. Seven user-facing messages hardcoded `npm install -g statenest`, telling
-   users to install an unrelated package.
+### Performance
 
-Confirmed: no `statenest` command writes to `CLAUDE_CONFIG_DIR` as a side effect.
-Registering the plugin is an explicit `statenest integrate claude` step and never
-happens during `init`, `scan`, `doctor` or any read command.
+Session start is flat from 10 to 500 projects, which is the property that
+matters — it means the project is resolved by a hash of its git remote rather
+than by searching. The absolute numbers from the most recent run were taken on a
+machine carrying an unrelated process using ~5.8 cores (load average 15), so
+they are inflated: ~150 ms p50 against ~91 ms measured on a quiet machine
+earlier. Nothing in the rename touches those code paths. Re-run `npm run bench`
+on an idle machine before quoting a figure publicly.
 
 ---
 
 ## Explicitly out of scope for 0.1.0
 
-Stated so that their absence reads as a decision rather than an oversight.
-
-- No library API. `package.json` declares no `main` or `types`; `exports`
-  exposes only `package.json`, so `import '<name>'` fails cleanly rather than
+- No library API. `package.json` declares no `main` or `types`, and `exports`
+  exposes only `package.json`, so `import 'statenest'` fails cleanly rather than
   resolving into internal modules. The CLI, the on-disk format and the MCP tools
   are the interface.
 - No adapters beyond Claude Code.
 - No cloud, no accounts, no embeddings, no vector database.
-- Version is 0.1.0 and the on-disk format may change before 1.0.0. Migrations
-  are provided and back up before they write.
+- Version is 0.1.0. The on-disk format may change before 1.0.0; migrations are
+  applied on read and back up before writing.
+- Pre-rename data in the old data directory is detected and reported, never read
+  or migrated. See the CHANGELOG.
