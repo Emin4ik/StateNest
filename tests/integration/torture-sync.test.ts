@@ -13,6 +13,18 @@ const execFileAsync = promisify(execFile);
 const GIT_AVAILABLE = await hasGit();
 
 /**
+ * Every test here drives real `git` processes against two clones and a bare
+ * remote — dozens of spawns each.
+ *
+ * Vitest's 30s default is a fine bound for logic and a poor one for process
+ * spawning, which on Windows costs several times what it does elsewhere: this
+ * file takes ~15s on macOS and ~137s on a Windows runner. A timeout there says
+ * "the platform is slower", not "sync is broken", so it reports a failure that
+ * is never the real problem. The assertions are unchanged; only the patience.
+ */
+const GIT_TEST_TIMEOUT = 120_000;
+
+/**
  * Two machines, one data repository, adversarial timing.
  *
  * The promise sync makes is narrow but absolute: nothing is ever lost, and
@@ -124,7 +136,7 @@ describe('two-machine sync', () => {
     );
     // A forced update shows as "forced-update" in the receiving repo's reflog.
     expect(reflog.stdout).not.toContain('forced-update');
-  });
+  }, GIT_TEST_TIMEOUT);
 
   it.runIf(GIT_AVAILABLE)(
     'reports a genuine conflict rather than choosing a side',
@@ -205,7 +217,7 @@ describe('two-machine sync', () => {
     const titles = decisions.map((d) => d.title);
     expect(titles).toContain('A decided to drop the timer');
     expect(titles).toContain('B decided to raise the threshold');
-  });
+  }, GIT_TEST_TIMEOUT);
 
   it.runIf(GIT_AVAILABLE)('a second machine keeps its own machine identity', async () => {
     const a = await machine(homeA.path, 'a');
@@ -229,7 +241,7 @@ describe('two-machine sync', () => {
     expect(tracked.stdout).not.toContain('machine.json');
     expect(tracked.stdout).not.toContain('cache/');
     expect(tracked.stdout).not.toContain('logs/');
-  });
+  }, GIT_TEST_TIMEOUT);
 
   it.runIf(GIT_AVAILABLE)('both machines appear as locations of one project', async () => {
     const a = await machine(homeA.path, 'a');
@@ -247,7 +259,7 @@ describe('two-machine sync', () => {
     const machineIds = new Set(merged.local_locations.map((l) => l.machine_id));
     expect(machineIds.size).toBe(2);
     expect(await new Registry(a.workspace.store).all()).toHaveLength(1);
-  });
+  }, GIT_TEST_TIMEOUT);
 
   describe('offline', () => {
     it.runIf(GIT_AVAILABLE)('reports offline without touching local data', async () => {
@@ -271,7 +283,7 @@ describe('two-machine sync', () => {
       expect(['offline', 'local-only']).toContain(result.outcome);
       const after = await new Registry(a.workspace.store).all();
       expect(after).toHaveLength(before.length);
-    });
+    }, GIT_TEST_TIMEOUT);
 
     it.runIf(GIT_AVAILABLE)('every local command still works while offline', async () => {
       const a = await machine(homeA.path, 'a');
@@ -314,7 +326,7 @@ describe('two-machine sync', () => {
           { machineId: a.workspace.machineId, source: 'cli', timestamp: '2026-09-18T11:00:00Z' },
         ),
       ).resolves.toBeTruthy();
-    });
+    }, GIT_TEST_TIMEOUT);
 
     it.runIf(GIT_AVAILABLE)('recovers once the remote is reachable again', async () => {
       const a = await machine(homeA.path, 'a');
@@ -361,7 +373,7 @@ describe('two-machine sync', () => {
         'main',
       ]);
       expect(listing.stdout).toContain('checkpoints/');
-    });
+    }, GIT_TEST_TIMEOUT);
   });
 
   describe('a credential stops everything before git sees it', () => {
@@ -398,7 +410,7 @@ describe('two-machine sync', () => {
         '--oneline',
       ]).catch(() => ({ stdout: '' }));
       expect(log.stdout.trim()).toBe('');
-    });
+    }, GIT_TEST_TIMEOUT);
   });
 
   describe('sync is not destructive', () => {
@@ -413,7 +425,7 @@ describe('two-machine sync', () => {
 
       await a.sync.sync();
       await expect(readFile(stateFile, 'utf8')).resolves.toContain('hand written');
-    });
+    }, GIT_TEST_TIMEOUT);
 
     it.runIf(GIT_AVAILABLE)('leaves a file it cannot parse alone', async () => {
       const a = await machine(homeA.path, 'a');
@@ -427,6 +439,6 @@ describe('two-machine sync', () => {
       await expect(
         readFile(a.workspace.profilePaths.projectFile(project.id), 'utf8'),
       ).resolves.toBe(broken);
-    });
+    }, GIT_TEST_TIMEOUT);
   });
 });
