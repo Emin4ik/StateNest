@@ -31,16 +31,17 @@ permissions:
   contents: read
 
 env:
-  # The one version published by hand, because npm will not configure a trusted
-  # publisher for a package that does not exist yet. When that version is
-  # already on the registry AND the published package is provably this
-  # repository's, the publish step is skipped instead of failing, so the first
-  # public release is not a red workflow run.
+  # Retired 2026-09-18, once v0.1.0 had shipped. Empty means no version gets
+  # special treatment: every duplicate now fails, 0.1.0 included.
   #
-  # Clear this to '' once v0.1.0 has shipped. From then on every duplicate,
-  # including 0.1.0, fails like any other. scripts/check-publishable.mjs decides;
+  # It existed because npm will not configure a trusted publisher for a package
+  # that does not exist yet, so 0.1.0 had to be published by hand — and tagging
+  # it afterwards would otherwise have produced a deliberately failed run on the
+  # first public release. The machinery stays, tested, in case a future package
+  # ever needs the same one-time allowance: set this to that version, ship, and
+  # clear it again. scripts/check-publishable.mjs decides;
   # tests/integration/publishable.test.ts pins both sides of the line.
-  BOOTSTRAP_VERSION: '0.1.0'
+  BOOTSTRAP_VERSION: ''
 
 jobs:
   release:

@@ -8,10 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Until 1.0.0, the on-disk data format may change between minor versions.
 Migrations are provided and are never destructive: see `docs/data-model.md`.
 
-## [0.1.0] — unreleased
+## [0.1.0] — 2026-09-18
 
-First release. Not yet published: see
-[docs/release-readiness.md](docs/release-readiness.md).
+First public release. Published to npm as
+[`statenest`](https://www.npmjs.com/package/statenest).
 
 ### Naming
 

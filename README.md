@@ -1,8 +1,5 @@
 # StateNest
 
-> **v0.1.0 release candidate.** The package is not on npm yet, so install it
-> from a clone — see [Install](#install). Everything else works today.
-
 **You have forty projects. You cannot remember where you stopped in any of them.**
 
 Which repo was that? Where did I clone it on this laptop? Which VPS runs it?
@@ -88,14 +85,12 @@ That is the product.
 ## Install
 
 ```bash
-git clone https://github.com/Emin4ik/StateNest.git
-cd StateNest
-npm ci && npm run build && npm link
+npm install -g statenest
 statenest init
 ```
 
-Requires Node.js 22.12 or newer. Once published this becomes a single
-`npm install -g statenest`.
+Requires Node.js 22.12 or newer. To work on StateNest itself instead, see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 `statenest init` asks which directories hold your projects, scans them, and shows you
 what it found. It takes about two minutes, and it tells you exactly what it

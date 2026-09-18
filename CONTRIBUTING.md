@@ -6,8 +6,8 @@ all of their work, so the bar is correctness and clarity over speed.
 ## Getting set up
 
 ```bash
-git clone https://github.com/Emin4ik/StateNest
-cd statenest
+git clone https://github.com/Emin4ik/StateNest.git
+cd StateNest
 npm ci
 npm run build
 npm test

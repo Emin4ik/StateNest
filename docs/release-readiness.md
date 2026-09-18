@@ -3,10 +3,13 @@
 Assessed 2026-09-18 against the current tree, after the rename to StateNest and
 the first real CI runs.
 
-**Status: ready, pending the owner's decision to publish.** The two blockers
-that held v0.1.0 — an unusable name and no repository identity — are resolved,
-and the cross-platform matrix has now actually executed rather than merely
+**Status: released.** v0.1.0 was published to npm on 2026-09-18. The two
+blockers that held it — an unusable name and no repository identity — were
+resolved, and the cross-platform matrix actually executed rather than merely
 existing as YAML.
+
+This document is kept as the record of what was verified before that release.
+The living process lives in [release/checklist.md](release/checklist.md).
 
 Run `npm run release:check` for the machine-checkable half of this document. It
 exits 0.
@@ -29,19 +32,16 @@ For the record, the two that stood until this phase:
    [Emin4ik/StateNest](https://github.com/Emin4ik/StateNest), public, MIT,
    default branch `main`.
 
-Nothing has been published to npm, and no tag or GitHub Release exists. That is
-the owner's call.
+`statenest@0.1.0` is on npm, `v0.1.0` is tagged, and the GitHub Release exists.
 
 ---
 
 ## Important
 
-- **`npm publish` has never been rehearsed against the real registry.** The
-  tarball has been built, installed from disk and driven on three platforms, but
-  a publish is still a first.
-- **No provenance.** Publishing with `npm publish --provenance` from CI would
-  let users verify the tarball was built from the commit it claims. Worth doing
-  on the first publish rather than retrofitting.
+- **0.1.0 carries no provenance attestation.** It had to be published by hand,
+  because npm will not configure a trusted publisher for a package that does not
+  exist yet. Trusted publishing is configured now, so every release after it is
+  published from GitHub Actions with provenance.
 - **No recorded demo.** `npm run demo` is deterministic and safe to record
   (invented data, throwaway home, fixed machine name), but no recording exists,
   so the README still asks readers to take its console blocks on trust.
