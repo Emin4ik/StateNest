@@ -16,7 +16,13 @@ const CLI = join(ROOT, 'dist', 'cli', 'bin.js');
  * the prose looking perfectly reasonable. This reads the commands back out of
  * the documentation and asks the CLI whether each one is real.
  */
-const DOCS = ['docs/command-reference.md', 'docs/user-guide.md', 'README.md'];
+const DOCS = [
+  'docs/command-reference.md',
+  'docs/user-guide.md',
+  'docs/multi-machine.md',
+  'docs/getting-started.md',
+  'README.md',
+];
 
 /** Commands that take a subcommand, so `statenest task add` is one command. */
 const PARENTS = new Set([

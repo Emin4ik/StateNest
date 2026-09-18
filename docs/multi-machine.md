@@ -7,33 +7,69 @@ unsupported, this page says so rather than guessing.
 
 ---
 
-## The shape of it
+## Two models, both supported
+
+There is no single right answer here. **Your privacy requirement decides**, and
+the two models cost different things.
+
+### Model A — one shared profile
+
+Every machine uses the **same profile name** and syncs to the **same** private
+repository.
 
 ```
-Home MacBook                     Work laptop
-  personal profile                 work profile
-  └─ private sync repo A           └─ private sync repo B
-            │                                │
-            └──────── never meet ────────────┘
+Home MacBook ─┐
+              │
+Work laptop ──┼──  profile "personal"  ──▶  PRIVATE statenest-data repo
+              │
+Dev machine ──┘
 
-VPSes
-  registered as remotes + deployments, inside whichever profile owns them.
-  StateNest is NOT installed on them.
-
-Local dashboard
-  └─ statenest dashboard --all-profiles
-     read-only, both profiles, every row labelled
+VPSes: remotes + deployments in that same profile.
 ```
 
-Two rules make this safe, and they are structural rather than enforced by
-policy:
+**You get:** one complete registry. `statenest projects` lists everything you
+own after a sync, `statenest recent` covers all of it, `statenest machine list`
+shows every participating machine, `statenest where <project>` shows each
+machine's path plus deployments — and plain `statenest dashboard --open` is all
+you need. It is the simplest thing to hold in your head.
 
-1. **A profile is a directory.** Sync operates on one profile directory, so a
-   work project cannot reach a personal sync repository — the files are not
-   inside it.
+**You give up:** the structural boundary. Personal and work metadata live in one
+private repository, and any machine that syncs it receives all of it. If that is
+what you want, this is a completely valid architecture — not a compromise.
+
+### Model B — separate profiles
+
+```
+personal  ──▶  private repo A
+work      ──▶  private repo B
+
+statenest dashboard --all-profiles --open   # read-only view of both
+```
+
+**You get:** isolation that is structural rather than a rule anyone has to
+remember. Sync operates on one profile directory, so a work project cannot reach
+the personal repository — its files are not inside it.
+
+**You give up:** simplicity. CLI commands stay profile-scoped (`statenest
+--profile work projects`), and there is more to set up.
+
+### What makes either safe
+
+1. **A profile is a directory.** Sync operates on one profile directory, so
+   profiles cannot bleed into one another's repositories.
 2. **The dashboard has no verbs.** Every method except `GET` and `HEAD` is
-   refused with 405. A unified view cannot write to the wrong profile because it
-   cannot write at all.
+   refused with 405, so the unified view cannot write anywhere at all.
+
+### About the name
+
+The profile name carries no meaning to StateNest. `personal`, `main`, `default`,
+your own name — it is a label. What matters for sharing a dataset is that the
+participating machines use **the same profile name and the same sync
+repository**.
+
+If you already have real history in a profile called `personal`, keep it.
+StateNest has no profile rename and no profile merge, so a prettier name would
+cost you your checkpoints, tasks and decisions. That is a bad trade.
 
 ---
 
@@ -72,8 +108,14 @@ npm install -g statenest
 statenest init
 ```
 
-Use the **same profile name** as the first computer — `personal` is the default
-on both, so if you did not change it, there is nothing to do.
+Use the **same profile name** as the first computer. `personal` is the default
+on both, so if you never changed it there is nothing to do. If you did:
+
+```bash
+statenest profile list          # what exists here
+statenest profile create main   # only if that name does not exist yet
+statenest profile use main
+```
 
 The second machine gets its **own machine id**. That is what lets one project
 show up as being in two places.
@@ -102,11 +144,22 @@ statenest projects       # the first computer's projects
 statenest machine list   # both computers
 ```
 
+> **Sync before you scan on a new machine.** Both orders work — StateNest
+> merges a populated local profile with a populated remote, and that case is
+> tested. But syncing first means this machine already knows the project
+> identities and history before it registers anything, so its local checkouts
+> attach to the projects that exist instead of arriving as a separate set to be
+> reconciled. It is the sequence with the fewest moving parts, not the only
+> safe one.
+
 ## 6. Scan the repositories that live on this computer
 
 ```bash
-statenest scan ~/code
+statenest scan ~/code --save-roots
 ```
+
+`--save-roots` remembers these directories on this machine's profile, so later
+scans need no arguments.
 
 If a repository here is a clone of one the other machine already knows, its
 identity comes from the same git remote, so StateNest links it as **another
@@ -127,6 +180,50 @@ statenest sync
 ```
 
 Now `statenest where <project>` on either machine shows both checkouts.
+
+### What the lists show once machines share a profile
+
+**`statenest projects` lists every project in the profile — including projects
+whose source code is not on this machine.**
+
+```
+PROJECT    STATUS  LAST ACTIVE  WHERE
+GAME       active  2h ago       local
+StateNest  active  1d ago       local
+SCADA      active  3h ago       work-laptop
+XDR        active  2d ago       work-laptop
+```
+
+On the MacBook, `SCADA` and `XDR` are listed with the machine that has them. The
+MacBook knows they exist, what they are for, what is next — and does not have
+their code.
+
+**Sync moves StateNest's metadata and memory. It does not move your source
+code.** Nothing clones a repository for you, and nothing is checked out.
+
+To ask *which machines have this, and where does it run*:
+
+```bash
+statenest where SCADA
+```
+
+```
+SCADA
+  Local
+    work-laptop
+      C:\Projects\SCADA  (main)
+      last seen 3h ago
+  Deployed
+    production
+      ssh alias   scada-prod
+      path        /srv/scada
+```
+
+`statenest machine list` shows every machine participating in the profile, with
+`*` marking the one you are on. If two machines end up with the same display
+name — easily done, since both are derived from the hostname — run
+`statenest machine rename <name>` on one of them. The ids differ regardless, so
+nothing is confused; the listing is just easier to read.
 
 ## 8. Register VPSes and deployments
 
@@ -187,6 +284,27 @@ If you would rather start that resolution over:
 ```bash
 git rebase --abort      # back to before the sync; your local data is intact
 ```
+
+### `profile.yaml` is the one you will actually see
+
+Every machine writes `last_sync_at` into its own `profile.yaml` after a
+successful sync. When several machines share one profile, that makes
+`profile.yaml` the record most likely to collide — expect it occasionally,
+especially early on while the machines are catching up with each other.
+
+It is bookkeeping, not memory. **Keep either side**; the timestamps mean nothing
+once resolved:
+
+```bash
+$EDITOR ~/.statenest/profiles/personal/profile.yaml   # delete the <<<< ==== >>>> lines
+git -C ~/.statenest/profiles/personal add profile.yaml
+git -C ~/.statenest/profiles/personal rebase --continue
+statenest sync
+```
+
+While that conflict is unresolved, StateNest cannot read the profile, and every
+command says so — naming the file, the conflict and both ways out. Your projects
+and checkpoints are untouched throughout; only this one file is unreadable.
 
 ---
 
@@ -257,6 +375,9 @@ remote.
 | Is sync strictly per profile? | Yes. `ProfileSync` operates on one profile directory |
 | Can two profiles use different private repositories? | Yes, and tested: each remote contains only its own profile's data |
 
+With one shared profile, none of this comes up: every command already covers
+everything, and `--all-profiles` is unnecessary.
+
 ### Why the CLI stays single-profile
 
 The dashboard is read-only by construction, so a unified view there cannot write
@@ -266,20 +387,62 @@ works for the read commands is a habit that eventually gets typed next to a
 write. One place to see everything is the requirement; every command growing a
 cross-profile mode is not.
 
-### Do not merge profiles to get one view
+### Collapsing profiles is a choice, not a workaround
 
-It would work, and it would cost you the isolation you set the profiles up for:
-one sync repository holding both, work project names in a personal backup, and
-no structural barrier left. `--all-profiles` exists so you do not have to make
-that trade.
+If you want the isolation, do not collapse profiles merely to get one view —
+`--all-profiles` exists so you do not have to pay for a viewer with your
+boundary.
+
+But choosing **one shared profile deliberately** is a different thing entirely,
+and it is fully supported. That is Model A above: one namespace, one sync
+repository, the plain `statenest dashboard` and every CLI command covering
+everything you own. The question is not which is correct; it is whether you need
+work and personal metadata kept apart. Only you know that.
 
 ---
+
+## If you already have two profiles and want one
+
+Say you started with `personal` on the MacBook and `work` on the laptop, and
+have since decided you want a single namespace.
+
+**There is no merge command, and there is no supported way to copy records
+between profile directories.** Do not do it by hand — the files reference
+machine ids and project ids that only make sense inside their own profile, and
+nothing validates the result.
+
+What does work:
+
+1. **Choose the profile holding the memory you would most hate to lose** —
+   usually the one with the most checkpoints and decisions. That becomes the
+   shared profile.
+2. **Sync it first**, from the machine it lives on, to the private repository
+   you intend to share.
+3. **On the other machine, join that same profile**: `statenest profile use
+   <name>` (or `create` it first if the name does not exist there), then
+   `sync init` against the same repository, then `sync`.
+4. **Scan that machine's repositories** — `statenest scan ~/code --save-roots` —
+   and sync again. Its checkouts attach to the projects that already exist.
+5. **Leave the old profile alone.** It is still on disk, still complete, and
+   costs nothing. It is your backup.
+6. **Only then** consider what is genuinely missing. Checkpoints in the
+   abandoned profile are Markdown files you can read; tasks and decisions are
+   YAML. If something matters, re-record it deliberately — a handful of
+   `statenest checkpoint` and `statenest decision add` calls is safer than any
+   copy, because it goes through the same validation as everything else.
+
+Do not delete the old profile until you have used the shared one for a while and
+are sure nothing is missing. StateNest will not delete it for you, and it does
+not get in the way.
 
 ## What is not supported
 
 Said plainly, so nobody builds on an assumption:
 
 - **No cross-profile CLI aggregation.** Dashboard only.
+- **No profile rename, merge or delete.** `statenest profile` has `list`,
+  `create`, `use` and `show`, and nothing else. Choose a name you can live with,
+  and do not plan on consolidating two populated profiles later.
 - **No automatic conflict resolution.** You resolve it, or you abort it.
 - **No merging of two projects that merely share a name.** Identity is the git
   remote, and nothing else.

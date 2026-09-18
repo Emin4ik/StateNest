@@ -63,9 +63,22 @@ export class Store {
   // -------------------------------------------------------------------------
 
   async readProfile(): Promise<Profile | null> {
-    const { value, issue } = await readYamlFile(this.paths.profileFile, ProfileSchema, 'profile');
-    this.record(issue);
-    return value;
+    return (await this.readProfileResult()).value;
+  }
+
+  /**
+   * The profile, and why it could not be read when it could not.
+   *
+   * `readYamlFile` already distinguishes "no such file" (issue null) from
+   * "the file is there and unreadable" (issue set). Collapsing both to null
+   * made the caller report a missing profile for a profile that exists - which
+   * is what a machine sees mid-rebase, when sync has left conflict markers in
+   * profile.yaml.
+   */
+  async readProfileResult(): Promise<{ value: Profile | null; issue: LoadIssue | null }> {
+    const result = await readYamlFile(this.paths.profileFile, ProfileSchema, 'profile');
+    this.record(result.issue);
+    return result;
   }
 
   async writeProfile(profile: Profile): Promise<Profile> {

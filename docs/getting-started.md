@@ -96,19 +96,34 @@ npm install -g statenest
 statenest init
 ```
 
-To carry your notes across too, sync both to a private repository you own:
+To carry your notes across too, sync both to a private repository you own.
+**Use the same profile name on both machines** — `personal` is the default, so
+usually there is nothing to change:
 
 ```bash
 # On the first machine
 statenest sync init git@github.com:you/statenest-data.git
 statenest sync
 
-# On the second
+# On the second, sync BEFORE scanning: receive what already exists,
+# then register what lives here.
 statenest sync init git@github.com:you/statenest-data.git
+statenest sync
+statenest scan ~/code --save-roots
 statenest sync
 ```
 
-## Keep work separate
+Both machines now share one registry. `statenest projects` lists everything,
+including projects whose code is only on the other machine, and
+`statenest where <project>` says which machine has what.
+
+Full walkthrough, including what happens when two machines disagree:
+[multi-machine.md](multi-machine.md).
+
+## Optionally, keep work separate
+
+Profiles are an **optional** isolation boundary, not something you have to use.
+Reach for one when personal and work metadata must not share a sync repository:
 
 ```bash
 statenest --profile work init
@@ -117,7 +132,14 @@ statenest --profile work sync init git@github.company.com:you/brain-data.git
 ```
 
 Each profile is its own directory with its own remote. A work project cannot
-reach your personal repository.
+reach your personal repository. To see both at once, read-only:
+
+```bash
+statenest dashboard --all-profiles --open
+```
+
+If you would rather have one namespace for everything, that is equally valid —
+keep a single profile and skip this section.
 
 Set a default for a shell session:
 

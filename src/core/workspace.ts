@@ -84,8 +84,41 @@ export class Workspace {
     const profilePaths = paths.profile(profileName);
     const store = new Store(profilePaths);
 
-    const profile = await store.readProfile();
+    const { value: profile, issue } = await store.readProfileResult();
     if (!profile) {
+      // A profile that exists but cannot be read is a different problem from a
+      // profile that does not exist, and saying the wrong one sends the user
+      // looking for data they still have. The common cause is an unresolved
+      // sync conflict: several machines sharing one profile all write
+      // `last_sync_at`, so profile.yaml is the record most likely to collide.
+      if (issue) {
+        const raw = await readFileOrNull(profilePaths.profileFile);
+        const conflicted = raw?.includes('<<<<<<<') ?? false;
+
+        throw new BrainError(
+          'UNREADABLE_PROFILE',
+          `The profile "${profileName}" exists but could not be read.`,
+          {
+            details: [
+              `${contractHome(profilePaths.profileFile)}: ${issue.reason}`,
+              ...(conflicted
+                ? ['It contains unresolved merge conflict markers from a sync.']
+                : []),
+            ],
+            hints: conflicted
+              ? [
+                  'Resolve it, keeping either version - it is only bookkeeping:',
+                  `  $EDITOR ${contractHome(profilePaths.profileFile)}`,
+                  `  git -C ${contractHome(profilePaths.root)} add profile.yaml`,
+                  `  git -C ${contractHome(profilePaths.root)} rebase --continue`,
+                  'Or discard the in-progress sync and start it again:',
+                  `  git -C ${contractHome(profilePaths.root)} rebase --abort`,
+                ]
+              : ['statenest doctor', `Repair or restore ${contractHome(profilePaths.profileFile)}`],
+          },
+        );
+      }
+
       const available = await listProfileNames(paths);
       throw new BrainError('UNKNOWN_PROFILE', `No profile named "${profileName}".`, {
         details:

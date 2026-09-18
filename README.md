@@ -13,8 +13,9 @@ remembers your projects, where each one lives on each machine, which servers
 they deploy to, what you finished, what is blocked, and what you meant to do
 next.
 
-Everything is plain YAML and Markdown in `~/.statenest`. Nothing is
-uploaded. There is no account.
+Everything is plain YAML and Markdown in `~/.statenest`. There is no account,
+and nothing leaves your machine by default. Optional sync sends StateNest's own
+data — never your source code — to a private git repository **you** choose.
 
 ---
 
@@ -190,22 +191,35 @@ StateNest is about to write passes through a secret scanner first. Run
 
 Full detail: [docs/security-model.md](docs/security-model.md).
 
-### Work and personal are separate directories
+### Many machines: one profile, or several
+
+**One profile is the simple case, and usually the right one.** Every machine
+uses the same profile name and syncs to the same private repository, so
+`statenest projects` lists everything you own — including projects whose code
+lives on your other laptop.
+
+```
+Home MacBook ─┐
+              ├── profile "personal" ──▶ PRIVATE statenest-data repo
+Work laptop ──┘
+```
+
+**Profiles are an optional isolation boundary**, for when personal and work
+metadata must not share a repository:
 
 ```bash
 statenest profile create work        # a separate set of projects
 statenest profile use work           # switch
 statenest profile list               # see them all
+statenest dashboard --all-profiles   # read-only view of everything
 ```
 
-```
-~/.statenest/profiles/personal/   your own repo, your own remote
-~/.statenest/profiles/work/       a different repo, a different remote
-```
+A work project then cannot sync into a personal repository, because sync
+operates on one profile directory and the other profile's files are not inside
+it — a property of the layout, not a rule anyone has to remember.
 
-A work project cannot sync into a personal repository, because sync operates on
-one profile directory and the other profile's files are not inside it. That is
-a property of the layout, not a rule the code has to remember.
+Neither model is more correct. Your privacy requirement decides, and
+[docs/multi-machine.md](docs/multi-machine.md) walks through both.
 
 ### Optional sync, to a repository you own
 
