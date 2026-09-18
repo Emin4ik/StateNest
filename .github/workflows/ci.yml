@@ -5,6 +5,14 @@ on:
     branches: [main]
   pull_request:
 
+# Declared rather than inherited. The repository default is currently read-only,
+# but a setting can be changed by anyone with admin access and a workflow should
+# say what it needs. Nothing here writes to the repository, and nothing here
+# publishes - that lives in release.yml, which is the only place id-token is
+# ever granted.
+permissions:
+  contents: read
+
 # StateNest reads the filesystem and shells out to git, so the matrix is
 # not ceremony: path handling, atomic renames and git behaviour all differ
 # between these platforms, and every one of them is a supported target.

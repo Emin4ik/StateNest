@@ -1,11 +1,14 @@
 {
   "name": "statenest",
   "version": "0.1.0",
-  "description": "Local-first developer control plane: remembers your projects, machines, deployments and where you left off.",
+  "description": "Local-first project memory and developer control plane: remembers your projects, machines, deployments and where you left off, and hands that context to your coding agent.",
   "keywords": [
     "cli",
     "developer-tools",
+    "project-memory",
     "project-management",
+    "coding-agent",
+    "ai-agents",
     "claude-code",
     "mcp",
     "local-first",
@@ -69,6 +72,7 @@
     "smoke:install": "node scripts/smoke-install.mjs",
     "bench": "node scripts/benchmark.mjs",
     "demo": "node scripts/demo.mjs",
+    "readme:published": "node scripts/readme-published.mjs",
     "release:check": "npm run verify && npm run check:schemas && npm run verify:package && npm run check:metadata"
   },
   "dependencies": {

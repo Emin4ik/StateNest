@@ -99,6 +99,23 @@ The source tree has `node_modules` beside the code; a real install does not.
 That gap has already produced one bug that no in-tree test could catch
 (ADR 0006).
 
+## Releasing
+
+Maintainers only, and deliberately not automated end to end:
+
+- [docs/release/checklist.md](docs/release/checklist.md) — the checklist to work
+  through, including post-publish verification against the real registry
+- [docs/release/npm-publishing.md](docs/release/npm-publishing.md) — why the
+  first release is published by hand and every one after it is not
+- [docs/release/rollback.md](docs/release/rollback.md) — what to do when a
+  release is bad. Short version: never replace a published version
+
+Releases are triggered by pushing a `v*` tag, which runs
+[.github/workflows/release.yml](.github/workflows/release.yml). That workflow
+runs `npm run release:check` — the same gate you run locally — and refuses to
+publish if the tag and `package.json` disagree, or if the version already
+exists.
+
 ## Commit messages
 
 Present tense, explaining the change and why. If it fixes a bug, say what the

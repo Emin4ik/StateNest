@@ -1,0 +1,200 @@
+name: Release
+
+# Publishing is a security boundary, so this workflow is deliberately hard to
+# trigger by accident and impossible to trigger from a fork or a pull request.
+#
+#   push a v* tag          -> the normal path
+#   workflow_dispatch      -> manual, defaults to a dry run
+#
+# It never runs on an ordinary push to main. There is no pull_request or
+# pull_request_target trigger here at all, so untrusted code from a fork can
+# never reach the publish step or the OIDC identity.
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish. Must equal package.json version, e.g. 0.1.0'
+        required: true
+        type: string
+      dry_run:
+        description: 'Run every check and pack the tarball, but do not publish'
+        required: true
+        type: boolean
+        default: true
+
+# Read-only by default. The publish job raises only what it needs.
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+
+    # A fork that copies this file cannot publish: the condition fails there,
+    # and a fork has no access to this repository's OIDC identity regardless.
+    if: github.repository == 'Emin4ik/StateNest'
+
+    # Gives the maintainer a manual approval gate and binds the OIDC claim to a
+    # named environment. The npm trusted publisher must be configured with this
+    # exact environment name, or with the environment field left blank.
+    environment: release
+
+    permissions:
+      # id-token is what npm trusted publishing authenticates with. It is
+      # granted here and nowhere else in the repository.
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Check out the exact release ref
+        uses: actions/checkout@v4
+        with:
+          # Never fall back to a branch head: publish what the tag points at.
+          ref: ${{ github.ref }}
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          # Trusted publishing requires Node 22.14.0+; 24 is comfortably above
+          # it and is one of the versions CI already tests against.
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          cache: npm
+
+      - name: Require an npm new enough for trusted publishing
+        run: |
+          set -euo pipefail
+          required="11.5.1"
+          actual="$(npm --version)"
+          echo "npm $actual, node $(node --version)"
+          # Sort the two versions and check the smaller one is the requirement.
+          lowest="$(printf '%s\n%s\n' "$required" "$actual" | sort -V | head -n1)"
+          if [ "$lowest" != "$required" ]; then
+            echo "::error::npm $actual is older than the $required required for trusted publishing."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ---------------------------------------------------------------------
+      # Version and tag must agree, before anything is built or published.
+      # ---------------------------------------------------------------------
+      - name: Check the version matches the tag
+        env:
+          # Interpolated into the environment, never into the shell command, so
+          # a crafted ref or input cannot become shell syntax.
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          pkg_version="$(node -p 'require("./package.json").version')"
+          echo "package.json version: $pkg_version"
+
+          if [ "$EVENT_NAME" = "push" ]; then
+            expected="v$pkg_version"
+            echo "tag: $GITHUB_REF_NAME"
+            if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+              echo "::error::Tag $GITHUB_REF_NAME does not match package.json ($expected). Nothing published."
+              exit 1
+            fi
+          else
+            echo "requested version: $INPUT_VERSION"
+            if [ "$INPUT_VERSION" != "$pkg_version" ]; then
+              echo "::error::Requested $INPUT_VERSION but package.json is $pkg_version. Nothing published."
+              exit 1
+            fi
+          fi
+
+          echo "RELEASE_VERSION=$pkg_version" >> "$GITHUB_ENV"
+
+      # ---------------------------------------------------------------------
+      # Refuse to republish. npm forbids reusing a version anyway; failing here
+      # gives a comprehensible message instead of a registry error at the end.
+      # ---------------------------------------------------------------------
+      - name: Refuse to republish an existing version
+        run: |
+          set -euo pipefail
+          name="$(node -p 'require("./package.json").name')"
+          existing="$(npm view "$name@$RELEASE_VERSION" version 2>/dev/null || true)"
+          if [ -n "$existing" ]; then
+            echo "::error::$name@$RELEASE_VERSION is already on the registry. \
+          A published version can never be replaced. Bump the version in package.json, \
+          commit, tag the new version and run again. Do not delete and republish."
+            exit 1
+          fi
+          echo "$name@$RELEASE_VERSION is not on the registry yet."
+
+      # ---------------------------------------------------------------------
+      # The authoritative gate. Not a reduced copy of it.
+      # ---------------------------------------------------------------------
+      - name: Release gate
+        run: npm run release:check
+
+      - name: Pack and report the artifact
+        run: |
+          set -euo pipefail
+          npm pack --json --ignore-scripts > /tmp/pack.json
+          node -e '
+            const report = require("/tmp/pack.json")[0];
+            const files = report.files.map((f) => f.path);
+            const unwanted = files.filter((f) =>
+              /^tests\//.test(f) || /^src\//.test(f) || /\.map$/.test(f) ||
+              /^(tsconfig|vitest|eslint)/.test(f) || /\.log$/.test(f));
+            console.log("filename:   " + report.filename);
+            console.log("compressed: " + (report.size / 1024).toFixed(0) + " KB");
+            console.log("unpacked:   " + (report.unpackedSize / 1024 / 1024).toFixed(2) + " MB");
+            console.log("files:      " + report.entryCount);
+            if (unwanted.length) {
+              console.log("::error::Unwanted files in the tarball: " + unwanted.join(", "));
+              process.exit(1);
+            }
+            console.log("no tests, source, source maps, dev config or logs in the tarball");
+          '
+
+      - name: Upload the tarball for inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: statenest-${{ env.RELEASE_VERSION }}-tarball
+          path: '*.tgz'
+          retention-days: 14
+          if-no-files-found: error
+
+      # ---------------------------------------------------------------------
+      # Publish. No token anywhere: authentication is the OIDC id-token above,
+      # exchanged by npm for a short-lived credential. Provenance is generated
+      # automatically under trusted publishing; the flag makes the intent
+      # explicit and is what the provenance documentation asks for.
+      # ---------------------------------------------------------------------
+      - name: Publish to npm
+        if: github.event_name == 'push' || inputs.dry_run == false
+        run: npm publish --provenance --access public
+
+      - name: Explain a skipped publish
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == true
+        run: |
+          echo "Dry run: every check passed and the tarball was packed, but nothing was published."
+          echo "Re-run with dry_run unchecked, or push the v$RELEASE_VERSION tag, to publish."
+
+      - name: Summary
+        if: always()
+        env:
+          # Through the environment, not the shell. The tag pattern allows a
+          # prerelease suffix, so ref_name is not a fixed-shape string.
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          {
+            echo "### StateNest release"
+            echo ""
+            echo "- version: \`${RELEASE_VERSION:-unknown}\`"
+            echo "- trigger: \`$EVENT_NAME\`"
+            echo "- ref: \`$REF_NAME\`"
+          } >> "$GITHUB_STEP_SUMMARY"
