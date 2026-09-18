@@ -6,6 +6,7 @@ import { isPathInside } from '../util/paths.js';
 import { BrainError } from '../util/errors.js';
 import { auditProfile, describeBlock, hasBlockingFindings } from '../security/audit.js';
 import type { ProfilePaths } from '../core/paths.js';
+import { NO_ADOPTION_RECONCILER, type AdoptionReconciler } from '../core/adoption.js';
 
 /**
  * Optional synchronization of one profile through a git repository the user
@@ -117,6 +118,14 @@ export class ProfileSync {
   constructor(
     private readonly paths: ProfilePaths,
     private readonly brainHome: string,
+    /**
+     * What to carry across a first-join adoption.
+     *
+     * Optional so that callers with no data model - tests, and anything that
+     * only drives git - need not supply one. See `src/core/adoption.ts` for why
+     * adoption needs a seam at all.
+     */
+    private readonly adoption: AdoptionReconciler = NO_ADOPTION_RECONCILER,
   ) {
     assertInsideBrainHome(paths.root, brainHome);
   }
@@ -272,6 +281,10 @@ export class ProfileSync {
     // presented every remote project as a local deletion, and the next commit
     // would have deleted them for every machine.
     if (remoteReachable && !(await this.hasCommits()) && (await this.remoteHasCommits(status.branch))) {
+      // Note what this machine knows that the remote cannot, before the remote
+      // files land on top of it.
+      await this.adoption.capture();
+
       const adopted = await this.adoptRemoteHistory(status.branch);
       if (!adopted.ok) {
         return {
@@ -280,6 +293,11 @@ export class ProfileSync {
           message: `Could not adopt the existing remote history: ${firstLine(adopted.stderr)}`,
         };
       }
+
+      // Put it back before anything is staged, so it is committed and pushed by
+      // this same run rather than left as a dirty tree for a later one.
+      await this.adoption.restore();
+
       pulled = Number.parseInt(
         (await this.run(['rev-list', '--count', 'HEAD'])).stdout.trim(),
         10,

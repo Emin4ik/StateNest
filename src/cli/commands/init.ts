@@ -17,6 +17,7 @@ import { installClaudeIntegration, describeClaudeInstall } from '../../integrati
 import { hasLocationOnAnotherMachine } from '../../core/registry.js';
 import { updateMachineLocalState } from '../../core/machine-local.js';
 import { ProfileSync } from '../../sync/git-sync.js';
+import { preserveMachineLocations } from '../../core/adoption.js';
 import { writeDataRepoScaffolding } from '../../core/workspace.js';
 import { recordOutcome } from '../../sync/auto-sync.js';
 
@@ -258,7 +259,11 @@ async function offerSync(
   if (remote === '') return 'skipped';
 
   try {
-    const sync = new ProfileSync(workspace.profilePaths, workspace.paths.home);
+    const sync = new ProfileSync(
+      workspace.profilePaths,
+      workspace.paths.home,
+      preserveMachineLocations(workspace.store, workspace.machineId),
+    );
     await sync.initialise(remote);
     await writeDataRepoScaffolding(workspace.profilePaths);
     await workspace.saveProfile({

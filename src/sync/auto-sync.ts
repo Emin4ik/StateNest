@@ -10,6 +10,7 @@ import { withExclusiveFileLock } from '../util/file-lock.js';
 import { HOME_ENV_VAR } from '../core/paths.js';
 import { PROFILE_ENV_VAR } from '../core/workspace.js';
 import { ProfileSync, type SyncResult } from './git-sync.js';
+import { preserveMachineLocations } from '../core/adoption.js';
 
 /**
  * Sync that happens by itself.
@@ -173,7 +174,11 @@ async function drain(workspace: Workspace, options: AutoSyncOptions): Promise<Au
       break;
     }
 
-    const sync = new ProfileSync(workspace.profilePaths, workspace.paths.home);
+    const sync = new ProfileSync(
+      workspace.profilePaths,
+      workspace.paths.home,
+      preserveMachineLocations(workspace.store, workspace.machineId),
+    );
     const result = await sync.sync({ push: before.auto_push });
     last = result;
     ran = true;

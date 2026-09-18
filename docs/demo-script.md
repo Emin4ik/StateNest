@@ -196,6 +196,8 @@ typed on either machine.
 
 ### 7. One project, two locations
 
+This is machine B's **first** session. No second run, no warm-up.
+
 ```console
 $ statenest where harbour
 
@@ -243,10 +245,6 @@ question they are actually asking.
   will show the _same_ machine name, even though the machine ids differ and
   everything else is correct. `npm run demo:zero-touch` sets them explicitly;
   if you record by hand, use two real machines or say so.
-- **The second machine's own location appears from its second session.** Its
-  first session adopts the remote history, which replaces the record it had just
-  created locally. Everything else is correct immediately, and the demo script
-  accounts for this — do not present the first session's `where` output.
 - **Paths in the captures above were shortened.** The real output prints
   absolute paths, including the temporary directories a fixture run uses.
   Shorten for legibility, never invent.

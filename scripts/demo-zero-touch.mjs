@@ -173,13 +173,20 @@ async function setUp(machine) {
     { timeout: 120_000 },
   );
   await connectSync(machine);
+
+  // `statenest setup` syncs as soon as it connects, so a machine joining an
+  // established profile has already received everything before the user opens
+  // anything. Doing the same here keeps the demo faithful to the real command.
+  await execFileAsync(process.execPath, [CLI, '--home', machine.home, 'sync'], {
+    timeout: 120_000,
+  }).catch(() => {});
+
   await makeRepo(machine.code);
 }
 
 async function main() {
   await git(scratch, ['init', '--bare', '--quiet', '--initial-branch=main', BARE]);
   await setUp(MACHINES.a);
-  await setUp(MACHINES.b);
 
   banner('Machine A  ·  mac-mini');
   note('StateNest is installed and connected to a private repository. Nothing else.');
@@ -221,17 +228,13 @@ async function main() {
   await show(MACHINES.a, ['sync', 'status']);
 
   banner('Machine B  ·  linux-box');
-  note('A different computer. The same repository, cloned to a different path.');
+  note('A different computer, set up after the fact: `statenest setup`, same');
+  note('private repository. Then a clone of harbour at a different path.');
   await sleep(PAUSE);
 
-  // First session pulls; the brief it builds is from before that pull landed.
-  await hook(MACHINES.b, 'session-start', {
-    hook_event_name: 'SessionStart',
-    cwd: MACHINES.b.code,
-    session_id: 'demo-b-0',
-    source: 'startup',
-  });
-  await settle(MACHINES.b);
+  // Set up only now, which is when a second machine really joins - after the
+  // first has been using StateNest for a while.
+  await setUp(MACHINES.b);
 
   console.log(`\n${cyan('$ cd ~/work/harbour && claude')}\n`);
   await sleep(PAUSE);
@@ -243,6 +246,7 @@ async function main() {
       source: 'startup',
     }),
   );
+  await settle(MACHINES.b);
   await sleep(PAUSE);
 
   note("Claude on machine B opened already knowing what happened on machine A.");

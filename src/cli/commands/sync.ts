@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import { openContext, wantsJson } from '../context.js';
 import { bullet, failure, heading, print, printJson, style, success } from '../output.js';
 import { ProfileSync } from '../../sync/git-sync.js';
+import { preserveMachineLocations } from '../../core/adoption.js';
 import { writeDataRepoScaffolding } from '../../core/workspace.js';
 import { contractHome } from '../../util/paths.js';
 import { confirm, closePrompts } from '../prompt.js';
@@ -29,7 +30,11 @@ export function syncCommand(): Command {
     .action(async (remote: string, options: { branch: string; yes?: boolean }) => {
       try {
         const { workspace } = await openContext();
-        const sync = new ProfileSync(workspace.profilePaths, workspace.paths.home);
+        const sync = new ProfileSync(
+          workspace.profilePaths,
+          workspace.paths.home,
+          preserveMachineLocations(workspace.store, workspace.machineId),
+        );
 
         // Validate before saying anything else. Printing a privacy warning and
         // asking for confirmation about a string that is not a git remote asks
@@ -123,7 +128,11 @@ export function syncCommand(): Command {
     .option('--no-push', 'commit locally without pushing')
     .action(async (options: { message?: string; push: boolean }) => {
       const { workspace } = await openContext();
-      const sync = new ProfileSync(workspace.profilePaths, workspace.paths.home);
+      const sync = new ProfileSync(
+        workspace.profilePaths,
+        workspace.paths.home,
+        preserveMachineLocations(workspace.store, workspace.machineId),
+      );
 
       const result = await sync.sync({
         ...(options.message ? { message: options.message } : {}),
@@ -214,7 +223,11 @@ export function syncCommand(): Command {
     .option('--verbose', 'include the underlying git detail')
     .action(async (options: { verbose?: boolean }) => {
       const { workspace } = await openContext();
-      const sync = new ProfileSync(workspace.profilePaths, workspace.paths.home);
+      const sync = new ProfileSync(
+        workspace.profilePaths,
+        workspace.paths.home,
+        preserveMachineLocations(workspace.store, workspace.machineId),
+      );
       const status = await sync.status();
       const local = await readMachineLocalState(
         workspace.paths,
@@ -288,7 +301,11 @@ export function syncCommand(): Command {
     .action(async (options: { yes?: boolean }) => {
       try {
         const { workspace } = await openContext();
-        const sync = new ProfileSync(workspace.profilePaths, workspace.paths.home);
+        const sync = new ProfileSync(
+          workspace.profilePaths,
+          workspace.paths.home,
+          preserveMachineLocations(workspace.store, workspace.machineId),
+        );
         const local = await readMachineLocalState(
           workspace.paths,
           workspace.profile.name,
