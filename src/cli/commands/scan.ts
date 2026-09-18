@@ -9,6 +9,7 @@ import { contractHome, resolveUserPath } from '../../util/paths.js';
 import type { Registry } from '../../core/registry.js';
 import { hasLocationOnAnotherMachine } from '../../core/registry.js';
 import type { Workspace } from '../../core/workspace.js';
+import { readMachineLocalState, updateMachineLocalState } from '../../core/machine-local.js';
 
 export function scanCommand(): Command {
   return new Command('scan')
@@ -115,9 +116,19 @@ async function runScan(
   }
 
   if (options.saveRoots && !options.dryRun) {
-    const existing = new Set(workspace.profile.project_roots);
-    for (const target of targets) existing.add(contractHome(target));
-    await workspace.saveProfile({ ...workspace.profile, project_roots: [...existing].sort() });
+    // Scan roots describe this computer's layout, so they are machine-local.
+    // Sharing them let one machine overwrite another's, and made `statenest
+    // scan` with no arguments walk paths that do not exist here.
+    await updateMachineLocalState(
+      workspace.paths,
+      workspace.profile.name,
+      workspace.profile,
+      (state) => {
+        const roots = new Set(state.project_roots);
+        for (const target of targets) roots.add(contractHome(target));
+        return { ...state, project_roots: [...roots].sort() };
+      },
+    );
   }
 
   return {
@@ -231,8 +242,16 @@ function renderHumanReport(report: ScanReport, targets: string[], options: ScanO
 export async function resolveRoots(roots: string[], workspace: Workspace): Promise<string[]> {
   if (roots.length > 0) return roots.map((root) => resolveUserPath(root));
 
-  const remembered = workspace.profile.project_roots;
-  if (remembered.length > 0) return remembered.map((root) => resolveUserPath(root));
+  // This machine's remembered roots, carried forward once from a profile
+  // written by an older version.
+  const local = await readMachineLocalState(
+    workspace.paths,
+    workspace.profile.name,
+    workspace.profile,
+  );
+  if (local.project_roots.length > 0) {
+    return local.project_roots.map((root) => resolveUserPath(root));
+  }
 
   return defaultRoots();
 }

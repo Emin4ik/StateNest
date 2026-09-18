@@ -4,9 +4,9 @@ import { bullet, failure, heading, print, printJson, style, success } from '../o
 import { ProfileSync } from '../../sync/git-sync.js';
 import { writeDataRepoScaffolding } from '../../core/workspace.js';
 import { contractHome } from '../../util/paths.js';
-import { now } from '../../util/time.js';
 import { confirm, closePrompts } from '../prompt.js';
 import { BrainError } from '../../util/errors.js';
+import { readMachineLocalState, recordSyncCompleted } from '../../core/machine-local.js';
 
 export function syncCommand(): Command {
   const command = new Command('sync').description(
@@ -124,10 +124,10 @@ export function syncCommand(): Command {
       });
 
       if (result.outcome === 'synced' || result.outcome === 'up-to-date') {
-        await workspace.saveProfile({
-          ...workspace.profile,
-          sync: { ...workspace.profile.sync, last_sync_at: now() },
-        });
+        // Machine-local, outside the profile directory. Writing this into
+        // profile.yaml dirtied the repository the sync had just cleaned, and
+        // gave every machine a different value for the same synced field.
+        await recordSyncCompleted(workspace.paths, workspace.profile.name, workspace.profile);
       }
 
       if (wantsJson()) {
@@ -166,9 +166,27 @@ export function syncCommand(): Command {
           print('');
           for (const file of result.conflicts.slice(0, 10)) print(`    ${style.yellow(file)}`);
           print('');
-          print(style.dim('  Nothing was lost. Edit the files above to keep what you want, then:'));
+          print(style.dim('  Nothing was lost. Both versions are in the files above, in git.'));
+          print('');
+
+          // profile.yaml is a control file: while it holds conflict markers
+          // most commands stop working, and a user who does not know that may
+          // reach for something destructive. Say what not to do, once.
+          if (result.conflicts.some((file) => file.endsWith('profile.yaml'))) {
+            print(style.yellow('  Until this is resolved, most commands will say the profile'));
+            print(style.yellow('  cannot be read. That is this conflict, not lost data.'));
+            print(style.dim('  Do not create a replacement profile, and do not delete'));
+            print(style.dim(`  ${contractHome(workspace.paths.home)} — everything is still here.`));
+            print('');
+          }
+
+          print(style.dim('  Edit the files above to keep what you want, then:'));
+          print(bullet(style.cyan('git -C ' + contractHome(workspace.profilePaths.root) + ' add <file>')));
           print(bullet(style.cyan('git -C ' + contractHome(workspace.profilePaths.root) + ' rebase --continue')));
           print(bullet(style.cyan('statenest sync')));
+          print('');
+          print(style.dim('  Or back out of this sync entirely and try again later:'));
+          print(bullet(style.cyan('git -C ' + contractHome(workspace.profilePaths.root) + ' rebase --abort')));
           process.exitCode = 1;
           break;
 
@@ -198,7 +216,9 @@ export function syncCommand(): Command {
         return printJson({
           profile: workspace.profile.name,
           configured: workspace.profile.sync.enabled,
-          last_sync_at: workspace.profile.sync.last_sync_at ?? null,
+          last_sync_at: (
+            await readMachineLocalState(workspace.paths, workspace.profile.name, workspace.profile)
+          ).last_sync_at,
           ...status,
         });
       }

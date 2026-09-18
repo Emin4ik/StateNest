@@ -15,6 +15,7 @@ import { pathExists } from '../../util/fs-atomic.js';
 import { effectiveActivity } from './projects.js';
 import { installClaudeIntegration, describeClaudeInstall } from '../../integrations/claude/install.js';
 import { hasLocationOnAnotherMachine } from '../../core/registry.js';
+import { updateMachineLocalState } from '../../core/machine-local.js';
 
 export function initCommand(): Command {
   return new Command('init')
@@ -90,10 +91,14 @@ async function runInit(options: InitOptions): Promise<void> {
   if (options.scan) {
     chosenRoots = await chooseRoots(options.roots, assumeDefaults);
     if (chosenRoots.length > 0) {
-      await workspace.saveProfile({
-        ...workspace.profile,
-        project_roots: chosenRoots.map((root) => contractHome(root)),
-      });
+      // Machine-local: these are this computer's directories, and sharing them
+      // would have another machine scanning paths it does not have.
+      await updateMachineLocalState(
+        workspace.paths,
+        workspace.profile.name,
+        workspace.profile,
+        (state) => ({ ...state, project_roots: chosenRoots.map((root) => contractHome(root)) }),
+      );
     }
   }
 

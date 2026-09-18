@@ -8,6 +8,7 @@ import { Registry } from '../../core/registry.js';
 import { contractHome } from '../../util/paths.js';
 import { BrainError } from '../../util/errors.js';
 import { relativeTime } from '../../util/time.js';
+import { readMachineLocalState } from '../../core/machine-local.js';
 
 /**
  * Managing profiles.
@@ -164,13 +165,18 @@ export function profileCommand(): Command {
     .action(async () => {
       const { workspace } = await openContext();
       const projects = await new Registry(workspace.store).all();
+      const localState = await readMachineLocalState(
+        workspace.paths,
+        workspace.profile.name,
+        workspace.profile,
+      );
 
       if (wantsJson()) {
         return printJson({
           name: workspace.profile.name,
           path: workspace.profilePaths.root,
           projects: projects.length,
-          project_roots: workspace.profile.project_roots,
+          project_roots: localState.project_roots,
           privacy: workspace.profile.privacy,
           sync: workspace.profile.sync,
         });
@@ -182,7 +188,7 @@ export function profileCommand(): Command {
       print(`  ${style.dim('data')}         ${contractHome(workspace.profilePaths.root)}`);
       print(`  ${style.dim('projects')}     ${pluralize(projects.length, 'project')}`);
       print(
-        `  ${style.dim('scan roots')}   ${workspace.profile.project_roots.join(', ') || style.dim('none set')}`,
+        `  ${style.dim('scan roots')}   ${localState.project_roots.join(', ') || style.dim('none set')}`,
       );
       print(
         `  ${style.dim('sync')}         ${

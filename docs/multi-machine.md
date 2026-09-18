@@ -285,15 +285,16 @@ If you would rather start that resolution over:
 git rebase --abort      # back to before the sync; your local data is intact
 ```
 
-### `profile.yaml` is the one you will actually see
+### If `profile.yaml` ever conflicts
 
-Every machine writes `last_sync_at` into its own `profile.yaml` after a
-successful sync. When several machines share one profile, that makes
-`profile.yaml` the record most likely to collide — expect it occasionally,
-especially early on while the machines are catching up with each other.
+It should not. Up to and including **v0.1.1 it did**, routinely: every machine
+wrote `last_sync_at` into the shared `profile.yaml` after each sync, so two
+machines manufactured a conflict in it even when nothing they cared about
+disagreed. That is fixed — machine-local state now lives outside the profile
+directory, where sync cannot reach it.
 
-It is bookkeeping, not memory. **Keep either side**; the timestamps mean nothing
-once resolved:
+If you do hit one (because two machines genuinely edited the same profile
+setting — a description, a privacy level), it is still just a file:
 
 ```bash
 $EDITOR ~/.statenest/profiles/personal/profile.yaml   # delete the <<<< ==== >>>> lines
@@ -303,8 +304,30 @@ statenest sync
 ```
 
 While that conflict is unresolved, StateNest cannot read the profile, and every
-command says so — naming the file, the conflict and both ways out. Your projects
-and checkpoints are untouched throughout; only this one file is unreadable.
+command says so — naming the file, the conflict and both ways out. **Do not
+create a replacement profile and do not delete `~/.statenest`.** Your projects
+and checkpoints are untouched throughout; only this one file is unreadable, and
+both versions of it are still in git.
+
+### What is machine-local, and what is shared
+
+| Lives in the synced profile | Lives on this machine only |
+| --- | --- |
+| profile name, description | when this machine last synced |
+| privacy level | this machine's scan roots |
+| sync remote and branch | this machine's id |
+| projects, checkpoints, tasks, decisions | caches and logs |
+| machines and servers | |
+
+Machine-local state is `~/.statenest/local/<profile>.json`, deliberately outside
+`profiles/` so that sync cannot carry it anywhere. Your Mac scanning
+`~/Documents` and your Linux box scanning `~/code` is normal, and neither
+overwrites the other.
+
+A successful `statenest sync` leaves the profile repository clean —
+`statenest sync status` should say `local  clean` immediately afterwards. If it
+says `uncommitted changes` right after a successful sync, something wrote to the
+profile directory that should not have; that is worth reporting.
 
 ---
 

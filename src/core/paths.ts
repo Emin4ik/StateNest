@@ -63,8 +63,19 @@ export interface BrainPaths {
   readonly logsDir: string;
   readonly logFile: string;
   readonly backupsDir: string;
+  /**
+   * Machine-local state, deliberately outside `profiles/`.
+   *
+   * Everything under a profile directory is synced. State that is true of
+   * *this computer* rather than of the profile - when this machine last
+   * synced, which directories it scans - must not be, or every machine
+   * overwrites the others and manufactures conflicts in a file the CLI needs
+   * in order to run at all.
+   */
+  readonly localDir: string;
   profile(name: string): ProfilePaths;
   cacheFor(profileName: string): string;
+  localStateFor(profileName: string): string;
 }
 
 export interface ProfilePaths {
@@ -99,6 +110,7 @@ export function createPaths(homeOverride?: string, env: NodeJS.ProcessEnv = proc
   const home = homeOverride ?? resolveBrainHome(env);
   const profilesDir = join(home, 'profiles');
   const cacheDir = join(home, 'cache');
+  const localDir = join(home, 'local');
   const logsDir = join(home, 'logs');
 
   return {
@@ -110,7 +122,10 @@ export function createPaths(homeOverride?: string, env: NodeJS.ProcessEnv = proc
     logsDir,
     logFile: join(logsDir, 'statenest.log'),
     backupsDir: join(home, 'backups'),
+    localDir,
     cacheFor: (profileName: string) => join(cacheDir, sanitizeProfileName(profileName)),
+    localStateFor: (profileName: string) =>
+      join(localDir, `${sanitizeProfileName(profileName)}.json`),
     profile: (name: string) => createProfilePaths(profilesDir, name),
   };
 }
