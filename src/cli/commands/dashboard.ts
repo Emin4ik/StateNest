@@ -1,7 +1,9 @@
 import { Command } from 'commander';
 import { openContext } from '../context.js';
 import { heading, print, style } from '../output.js';
-import { startDashboard, isLoopbackHost } from '../../dashboard/server.js';
+import { startDashboard, isLoopbackHost, type ProfileView } from '../../dashboard/server.js';
+import { Registry } from '../../core/registry.js';
+import { Workspace, listProfileNames } from '../../core/workspace.js';
 import { contractHome } from '../../util/paths.js';
 
 export function dashboardCommand(): Command {
@@ -14,10 +16,31 @@ export function dashboardCommand(): Command {
       'allow binding to a non-loopback address, exposing your project list to the network',
     )
     .option('--open', 'open the dashboard in your browser')
+    .option(
+      '--all-profiles',
+      'show every profile in one read-only view, each row labelled with its profile',
+    )
     .action(async (options: DashboardCliOptions) => {
       const { workspace } = await openContext();
 
-      const running = await startDashboard(workspace, {
+      // Profiles stay separate on disk and in sync. This is a read-only join
+      // for display only: each view opens its own workspace, and the dashboard
+      // has no endpoint that writes anything, so a unified view cannot write
+      // to the wrong profile.
+      const views: ProfileView[] = [
+        { name: workspace.profile.name, workspace, registry: new Registry(workspace.store) },
+      ];
+
+      if (options.allProfiles) {
+        for (const name of await listProfileNames(workspace.paths)) {
+          if (name === workspace.profile.name) continue;
+          const other = await Workspace.open({ home: workspace.paths.home, profile: name });
+          views.push({ name, workspace: other, registry: new Registry(other.store) });
+        }
+        views.sort((a, b) => a.name.localeCompare(b.name));
+      }
+
+      const running = await startDashboard(views, {
         ...(options.host ? { host: options.host } : {}),
         ...(options.port ? { port: options.port } : {}),
         ...(options.yesExposeMe ? { allowNonLoopback: true } : {}),
@@ -27,7 +50,9 @@ export function dashboardCommand(): Command {
       heading('StateNest dashboard');
       print('');
       print(`  ${style.cyan(running.url)}`);
-      print(`  ${style.dim(`profile: ${workspace.profile.name}  ·  ${contractHome(workspace.paths.home)}`)}`);
+      const shown =
+        views.length === 1 ? workspace.profile.name : `${views.map((v) => v.name).join(', ')} (read-only)`;
+      print(`  ${style.dim(`profile: ${shown}  ·  ${contractHome(workspace.paths.home)}`)}`);
       print('');
 
       const host = options.host ?? workspace.config.dashboard.host;
@@ -66,6 +91,7 @@ interface DashboardCliOptions {
   host?: string;
   yesExposeMe?: boolean;
   open?: boolean;
+  allProfiles?: boolean;
 }
 
 /**

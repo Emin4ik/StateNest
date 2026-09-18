@@ -1,13 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { Workspace } from '../../src/core/workspace.js';
 import { Registry } from '../../src/core/registry.js';
 import { buildRecent, buildResumeBrief, renderSessionContext } from '../../src/core/context.js';
 import { createCheckpoint } from '../../src/checkpoints/create.js';
 import { search } from '../../src/search/search.js';
-import { startDashboard, type RunningDashboard } from '../../src/dashboard/server.js';
+import { startDashboard, type RunningDashboard , type ProfileView } from '../../src/dashboard/server.js';
 import { makeFakeRepo, makeTempDir, type TempDir } from '../helpers/fixtures.js';
+import { Workspace } from '../../src/core/workspace.js';
+
+/** The dashboard takes a list of profile views; these tests show exactly one. */
+function oneProfile(workspace: Workspace): ProfileView[] {
+  return [{ name: workspace.profile.name, workspace, registry: new Registry(workspace.store) }];
+}
+
 
 /**
  * Secrets that are already on disk.
@@ -165,7 +171,7 @@ describe('a secret already on disk never reaches an output', () => {
 
   it('is absent from every dashboard payload', async () => {
     const { workspace: reopened } = await reload();
-    server = await startDashboard(reopened, { host: '127.0.0.1', port: 0 });
+    server = await startDashboard(oneProfile(reopened), { host: '127.0.0.1', port: 0 });
 
     for (const path of [
       '/api/overview',

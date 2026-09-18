@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { isIP } from 'node:net';
-import { Registry } from '../core/registry.js';
+import { type Registry } from '../core/registry.js';
 import { buildRecent, buildResumeBrief } from '../core/context.js';
 import { search } from '../search/search.js';
 import { renderPage } from './page.js';
@@ -30,6 +30,21 @@ export interface DashboardOptions {
   allowNonLoopback?: boolean;
 }
 
+/**
+ * One profile, as the dashboard reads it.
+ *
+ * The unified view is a list of these. Profiles stay completely separate on
+ * disk and in sync; this is a read-only join performed in memory, for display,
+ * and every row carries the profile it came from. Nothing is written, so there
+ * is no such thing as writing to the wrong profile here - the dashboard has no
+ * verbs at all.
+ */
+export interface ProfileView {
+  name: string;
+  workspace: Workspace;
+  registry: Registry;
+}
+
 export interface RunningDashboard {
   url: string;
   close: () => Promise<void>;
@@ -52,9 +67,12 @@ export function isLoopbackHost(host: string): boolean {
 }
 
 export async function startDashboard(
-  workspace: Workspace,
+  views: ProfileView[],
   options: DashboardOptions = {},
 ): Promise<RunningDashboard> {
+  const primary = views[0];
+  if (!primary) throw new Error('The dashboard needs at least one profile to show.');
+  const { workspace } = primary;
   const host = options.host ?? workspace.config.dashboard.host;
   const port = options.port ?? workspace.config.dashboard.port;
 
@@ -75,10 +93,8 @@ export async function startDashboard(
     );
   }
 
-  const registry = new Registry(workspace.store);
-
   const server = createServer((request, response) => {
-    handle(request, response, workspace, registry).catch((error: unknown) => {
+    handle(request, response, views).catch((error: unknown) => {
       sendJson(response, 500, {
         error: error instanceof Error ? error.message : 'internal error',
       });
@@ -106,12 +122,26 @@ export async function startDashboard(
   };
 }
 
+/** Concatenate one payload per profile, tagging every row with its profile. */
+async function acrossProfiles<T>(
+  views: ProfileView[],
+  build: (view: ProfileView) => Promise<T[]>,
+): Promise<(T & { profile: string })[]> {
+  const perProfile = await Promise.all(
+    views.map(async (view) =>
+      (await build(view)).map((row) => ({ ...row, profile: view.name })),
+    ),
+  );
+  return perProfile.flat();
+}
+
 async function handle(
   request: IncomingMessage,
   response: ServerResponse,
-  workspace: Workspace,
-  registry: Registry,
+  views: ProfileView[],
 ): Promise<void> {
+  const primary = views[0]!;
+  const { workspace } = primary;
   // Only reads. Anything else is refused before it reaches a handler.
   if (request.method !== 'GET' && request.method !== 'HEAD') {
     sendJson(response, 405, { error: 'The dashboard is read-only.' });
@@ -126,19 +156,42 @@ async function handle(
       sendHtml(response, 200, renderPage());
       return;
 
-    case '/api/overview':
-      sendJson(response, 200, await buildOverview(workspace, registry));
+    case '/api/overview': {
+      const perProfile = await Promise.all(
+        views.map(async (view) => ({
+          ...(await buildOverview(view.workspace, view.registry)),
+          profile: view.name,
+        })),
+      );
+      // A single profile keeps exactly the shape it had. More than one adds
+      // the per-profile breakdown alongside the totals, so the boundary stays
+      // visible rather than being summed away.
+      sendJson(
+        response,
+        200,
+        perProfile.length === 1
+          ? { ...perProfile[0]!, profiles: perProfile }
+          : {
+              ...mergeOverviews(perProfile),
+              profiles: perProfile,
+            },
+      );
       return;
+    }
 
     case '/api/projects':
-      sendJson(response, 200, { projects: await projectSummaries(workspace, registry) });
+      sendJson(response, 200, {
+        projects: await acrossProfiles(views, (view) =>
+          projectSummaries(view.workspace, view.registry),
+        ),
+      });
       return;
 
     case '/api/recent': {
-      const projects = (await registry.all()).filter((p) => p.status !== 'archived');
-      const entries = await buildRecent(workspace.store, projects, { limit: 25 });
-      sendJson(response, 200, {
-        entries: entries.map((entry) => ({
+      const entries = await acrossProfiles(views, async (view) => {
+        const projects = (await view.registry.all()).filter((p) => p.status !== 'archived');
+        const found = await buildRecent(view.workspace.store, projects, { limit: 25 });
+        return found.map((entry) => ({
           project: entry.project.name,
           project_id: entry.project.id,
           timestamp: entry.timestamp,
@@ -146,23 +199,51 @@ async function handle(
           summary: entry.summary,
           next: entry.checkpoint?.next ?? [],
           blockers: entry.checkpoint?.blockers ?? [],
-        })),
+        }));
       });
+      // Interleave by time, which is the whole point of a combined feed.
+      entries.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+      sendJson(response, 200, { entries: entries.slice(0, 25) });
       return;
     }
 
     case '/api/project': {
       const term = url.searchParams.get('id') ?? '';
-      const project = (await registry.all()).find((candidate) => candidate.id === term);
-      if (!project) {
+      const wanted = url.searchParams.get('profile');
+
+      // Scope to one profile. The same repository may legitimately be
+      // registered in two profiles, and answering from whichever happened to
+      // be searched first would show work data on a personal row.
+      const candidates = (
+        await Promise.all(
+          views
+            .filter((view) => wanted === null || view.name === wanted)
+            .map(async (view) => ({
+              view,
+              project: (await view.registry.all()).find((p) => p.id === term) ?? null,
+            })),
+        )
+      ).filter((entry) => entry.project !== null);
+
+      if (candidates.length === 0) {
         sendJson(response, 404, { error: 'No such project.' });
         return;
       }
-      const brief = await buildResumeBrief(workspace.store, project, {
-        machineId: workspace.machineId,
+      if (candidates.length > 1) {
+        sendJson(response, 409, {
+          error: 'That project id exists in more than one profile.',
+          profiles: candidates.map((entry) => entry.view.name),
+        });
+        return;
+      }
+
+      const owner = candidates[0]!.view;
+      const project = candidates[0]!.project!;
+      const brief = await buildResumeBrief(owner.workspace.store, project, {
+        machineId: owner.workspace.machineId,
         checkpointLimit: 10,
       });
-      const machines = await workspace.store.listMachines();
+      const machines = await owner.workspace.store.listMachines();
       const machineNames = new Map(machines.map((machine) => [machine.id, machine.name]));
 
       sendJson(response, 200, {
@@ -213,54 +294,63 @@ async function handle(
         sendJson(response, 200, { results: [] });
         return;
       }
-      const hits = await search(workspace.store, await registry.all(), query, { limit: 40 });
-      sendJson(response, 200, {
-        results: hits.map((hit) => ({
+      const results = await acrossProfiles(views, async (view) => {
+        const hits = await search(view.workspace.store, await view.registry.all(), query, {
+          limit: 40,
+        });
+        return hits.map((hit) => ({
           scope: hit.scope,
           project: hit.projectName,
           project_id: hit.projectId,
           excerpt: hit.excerpt,
           when: hit.timestamp ? relativeTime(hit.timestamp) : null,
-        })),
+        }));
       });
+      sendJson(response, 200, { results: results.slice(0, 40) });
       return;
     }
 
     case '/api/machines': {
-      const machines = await workspace.store.listMachines();
-      const projects = await registry.all();
       sendJson(response, 200, {
-        machines: machines.map((machine) => ({
-          id: machine.id,
-          name: machine.name,
-          os: machine.os,
-          type: machine.type,
-          is_current: machine.id === workspace.machineId,
-          last_seen: relativeTime(machine.last_seen_at),
-          projects: projects.filter((project) =>
-            project.local_locations.some((location) => location.machine_id === machine.id),
-          ).length,
-        })),
+        machines: await acrossProfiles(views, async (view) => {
+          const machines = await view.workspace.store.listMachines();
+          const projects = await view.registry.all();
+          return machines.map((machine) => ({
+            id: machine.id,
+            name: machine.name,
+            os: machine.os,
+            type: machine.type,
+            is_current: machine.id === view.workspace.machineId,
+            last_seen: relativeTime(machine.last_seen_at),
+            projects: projects.filter((project) =>
+              project.local_locations.some((location) => location.machine_id === machine.id),
+            ).length,
+          }));
+        }),
       });
       return;
     }
 
     case '/api/remotes': {
-      const remotes = await workspace.store.listRemotes();
-      const projects = await registry.all();
       sendJson(response, 200, {
-        remotes: remotes.map((remote) => ({
-          id: remote.id,
-          name: remote.name,
-          environment: remote.environment,
-          // Address only. There is no credential to send, by construction.
-          ssh_alias: remote.ssh_alias ?? null,
-          host: remote.host ?? null,
-          provider: remote.provider ?? null,
-          projects: projects
-            .filter((project) => project.deployments.some((d) => d.remote_id === remote.id))
-            .map((project) => project.name),
-        })),
+        // Servers stay scoped to the profile that registered them: a work VPS
+        // must never appear attached to a personal project.
+        remotes: await acrossProfiles(views, async (view) => {
+          const remotes = await view.workspace.store.listRemotes();
+          const projects = await view.registry.all();
+          return remotes.map((remote) => ({
+            id: remote.id,
+            name: remote.name,
+            environment: remote.environment,
+            // Address only. There is no credential to send, by construction.
+            ssh_alias: remote.ssh_alias ?? null,
+            host: remote.host ?? null,
+            provider: remote.provider ?? null,
+            projects: projects
+              .filter((project) => project.deployments.some((d) => d.remote_id === remote.id))
+              .map((project) => project.name),
+          }));
+        }),
       });
       return;
     }
@@ -268,6 +358,34 @@ async function handle(
     default:
       sendJson(response, 404, { error: 'Not found.' });
   }
+}
+
+/**
+ * Totals across every profile shown, for the unified view.
+ *
+ * Deliberately only sums counters. Profile-specific identity - which machine
+ * this is, which profile is active - is not meaningful once combined, so it is
+ * left to the per-profile breakdown rather than being averaged into nonsense.
+ */
+function mergeOverviews(parts: Awaited<ReturnType<typeof buildOverview>>[]) {
+  const byStatus: Record<string, number> = {};
+  const blocked: { name: string; id: string; blockers: string[]; profile?: string }[] = [];
+  const totals = { projects: 0, stale: 0, blocked: 0, deployments: 0, machines: 0, remotes: 0 };
+
+  for (const part of parts) {
+    totals.projects += part.totals.projects;
+    totals.stale += part.totals.stale;
+    totals.blocked += part.totals.blocked;
+    totals.deployments += part.totals.deployments;
+    totals.machines += part.totals.machines;
+    totals.remotes += part.totals.remotes;
+    for (const [status, count] of Object.entries(part.totals.by_status)) {
+      byStatus[status] = (byStatus[status] ?? 0) + count;
+    }
+    for (const entry of part.blocked) blocked.push({ ...entry, profile: part.profile });
+  }
+
+  return { profile: null, machine_id: null, totals: { ...totals, by_status: byStatus }, blocked };
 }
 
 async function buildOverview(workspace: Workspace, registry: Registry) {

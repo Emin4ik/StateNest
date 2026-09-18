@@ -81,6 +81,7 @@ export function renderPage(): string {
   .stat { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
   .stat b { display: block; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
   .stat span { color: var(--muted); font-size: 13px; }
+  .tag.profile { background: #2d3748; color: #cbd5e1; letter-spacing: .04em; }
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
   .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
   .card h3 { margin: 0 0 3px; font-size: 15px; font-weight: 620; }
@@ -129,6 +130,9 @@ export function renderPage(): string {
   const searchBox = document.getElementById('search');
 
   const get = (path) => fetch(path, { headers: { accept: 'application/json' } }).then((r) => r.json());
+  // True once more than one profile is being shown, so profile labels only
+  // appear when they carry information.
+  let multiProfile = false;
 
   /** Build an element. Text always goes through textContent. */
   function el(tag, opts = {}, children = []) {
@@ -187,6 +191,7 @@ export function renderPage(): string {
   // ---- Projects -----------------------------------------------------------
   async function viewProjects() {
     const { projects } = await get('/api/projects');
+    multiProfile = new Set(projects.map((p) => p.profile)).size > 1;
     if (!projects.length) return show(empty('No projects registered yet. Run: statenest scan ~/Projects'));
 
     show(el('div', { class: 'cards' }, projects.map(projectCard)), footnote());
@@ -195,9 +200,10 @@ export function renderPage(): string {
   function projectCard(p) {
     const here = p.locations.find((l) => l.is_current);
     return el('div', { class: 'card' }, [
-      el('button', { class: 'link', onClick: () => openProject(p.id) }, [el('h3', { text: p.name })]),
+      el('button', { class: 'link', onClick: () => openProject(p.id, p.profile) }, [el('h3', { text: p.name })]),
       p.description ? el('div', { class: 'desc', text: p.description }) : null,
       el('div', { class: 'row' }, [
+        multiProfile ? el('span', { class: 'tag profile', text: p.profile }) : null,
         el('span', { class: 'tag ' + p.status, text: p.status }),
         el('span', { class: 'muted', text: p.last_activity }),
         ...p.environments.map((e) => el('span', { class: 'tag', text: e })),
@@ -208,8 +214,11 @@ export function renderPage(): string {
     ]);
   }
 
-  async function openProject(id) {
-    const d = await get('/api/project?id=' + encodeURIComponent(id));
+  async function openProject(id, profile) {
+    // The profile is part of the address: the same repository may be
+    // registered in two profiles, and the answer must come from the right one.
+    const scope = profile ? '&profile=' + encodeURIComponent(profile) : '';
+    const d = await get('/api/project?id=' + encodeURIComponent(id) + scope);
     if (d.error) return show(empty(d.error));
 
     const section = (title, items) =>

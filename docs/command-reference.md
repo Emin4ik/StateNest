@@ -160,7 +160,9 @@ Register one directory as a project. Defaults to the current directory.
 
 ### `statenest scan [roots...]`
 
-Walk one or more directories and register the git repositories under them. See
+Walk one or more directories and register the git repositories under them. A
+repository is recognised by its `.git` marker — a directory in an ordinary
+clone, a file in a linked worktree or submodule. See
 [how scan works](user-guide.md#how-scan-actually-works) — it does not read your
 source code, and it does not read Claude Code history.
 
@@ -366,6 +368,11 @@ A local, read-only web view of your projects, machines and servers.
 | `--host <host>` | Address to bind to (loopback only unless forced) |
 | `--yes-expose-me` | Allow binding to a non-loopback address |
 | `--open` | Open it in your browser |
+| `--all-profiles` | Show every profile in one **read-only** view, each row labelled with its profile |
+
+`--all-profiles` is a display-only join: profiles keep separate directories and
+separate sync remotes, nothing is copied between them, and the dashboard has no
+endpoint that writes. See [multi-machine.md](multi-machine.md).
 
 Binds to `127.0.0.1` by default. `--yes-expose-me` is named that way on purpose.
 

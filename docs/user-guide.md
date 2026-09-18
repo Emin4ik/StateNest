@@ -120,8 +120,10 @@ at where you are — it is not special.
 
 This matters, because it is easy to assume it does more than it does.
 
-1. **It looks for git repositories.** A directory containing `.git` is a
-   candidate. That is the default rule.
+1. **It looks for git repositories.** A directory carrying a `.git` **marker**
+   is a candidate. The marker is a `.git` *directory* in an ordinary clone, or
+   a `.git` *file* in a linked worktree or a submodule — both count. That is
+   the default rule.
 2. **It descends recursively**, breadth-first, to a maximum depth of **8** by
    default (`--depth <n>` to change it, or `discovery.max_depth` in your
    config).
@@ -367,6 +369,7 @@ worth thirty seconds.
 | | |
 | --- | --- |
 | [Command reference](command-reference.md) | Every command and option |
+| [Multi-machine](multi-machine.md) | Two computers, VPSes, sync, and one unified view |
 | [Getting started](getting-started.md) | The short version |
 | [Claude Code](claude-code.md) | Hooks, skills, MCP tools, latency |
 | [Data model](data-model.md) | Every file and field on disk |

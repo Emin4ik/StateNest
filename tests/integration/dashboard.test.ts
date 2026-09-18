@@ -1,12 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { join } from 'node:path';
-import { Workspace } from '../../src/core/workspace.js';
 import { Registry } from '../../src/core/registry.js';
 import { createCheckpoint } from '../../src/checkpoints/create.js';
-import { startDashboard, isLoopbackHost, type RunningDashboard } from '../../src/dashboard/server.js';
+import { startDashboard, isLoopbackHost, type RunningDashboard , type ProfileView } from '../../src/dashboard/server.js';
 import { RemoteSchema } from '../../src/core/schema.js';
 import { makeFakeRepo, makeTempDir, type TempDir } from '../helpers/fixtures.js';
 import { now } from '../../src/util/time.js';
+import { Workspace } from '../../src/core/workspace.js';
+
+/** The dashboard takes a list of profile views; these tests show exactly one. */
+function oneProfile(workspace: Workspace): ProfileView[] {
+  return [{ name: workspace.profile.name, workspace, registry: new Registry(workspace.store) }];
+}
+
 
 describe('dashboard', () => {
   let home: TempDir;
@@ -46,7 +52,7 @@ describe('dashboard', () => {
     );
 
     // Port 0 lets the OS pick a free port, so tests never collide.
-    server = await startDashboard(workspace, { host: '127.0.0.1', port: 0 });
+    server = await startDashboard(oneProfile(workspace), { host: '127.0.0.1', port: 0 });
   });
 
   afterEach(async () => {
@@ -75,7 +81,7 @@ describe('dashboard', () => {
 
     it('refuses a non-loopback address without an explicit override', async () => {
       await expect(
-        startDashboard(workspace, { host: '0.0.0.0', port: 0 }),
+        startDashboard(oneProfile(workspace), { host: '0.0.0.0', port: 0 }),
       ).rejects.toThrow(/Refusing to serve the dashboard/i);
     });
 
@@ -89,7 +95,7 @@ describe('dashboard', () => {
     });
 
     it('binds elsewhere only when explicitly forced', async () => {
-      const exposed = await startDashboard(workspace, {
+      const exposed = await startDashboard(oneProfile(workspace), {
         host: '127.0.0.1',
         port: 0,
         allowNonLoopback: true,

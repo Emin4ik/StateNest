@@ -246,6 +246,7 @@ and WSL.
 | [User guide](docs/user-guide.md) | **Start here.** The mental model, what scan really does, the Claude Code lifecycle |
 | [Command reference](docs/command-reference.md) | Every command and option |
 | [Getting started](docs/getting-started.md) | Install, first scan, first checkpoint |
+| [Multi-machine](docs/multi-machine.md) | Two computers, VPSes, sync, and one unified view |
 | [Claude Code](docs/claude-code.md) | Hooks, skills, MCP tools, latency |
 | [Data model](docs/data-model.md) | Every file and field |
 | [Security model](docs/security-model.md) | Threat model and its limits |
