@@ -10,6 +10,32 @@ awkward, that is noted rather than tidied away.
 
 ---
 
+## Run it yourself
+
+```bash
+npm run build
+npm run demo:zero-touch          # or: -- --fast, with no pauses
+```
+
+`scripts/demo-zero-touch.mjs` performs the whole sequence below against two
+throwaway homes and a local bare repository in the system temp directory,
+driving the **real** Claude Code hook processes and the **real** background
+sync. Every block it prints came out of StateNest; the script writes no output
+of its own. It never touches your real `~/.statenest`.
+
+To record it as a GIF without committing a binary to the repository:
+
+```bash
+brew install vhs                              # github.com/charmbracelet/vhs
+vhs scripts/recording/zero-touch.tape         # -> docs/assets/zero-touch.gif
+```
+
+The `.tape` file is committed; the GIF deliberately is not. It regenerates from
+the real product in about a minute, and a re-recorded binary would grow the
+repository every time.
+
+---
+
 ## What the demo has to show
 
 In order of importance:
@@ -214,7 +240,7 @@ question they are actually asking.
 ## Honest notes for whoever records this
 
 - **Machine names come from the hostname.** Two shells on one physical machine
-  will show the *same* machine name, even though the machine ids differ and
+  will show the _same_ machine name, even though the machine ids differ and
   everything else is correct. Record on two real machines, or say so.
 - **Paths in the captures above were shortened.** The real output prints
   absolute paths, including the temporary directories a fixture run uses.

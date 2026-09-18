@@ -123,6 +123,24 @@ you have ever typed".
 
 ---
 
+## What StateNest is not
+
+Useful to say early, because each is a reasonable assumption and all are wrong.
+
+- **Not a transcript archive.** Conversations are not stored. Checkpoints reuse
+  the compaction summary the agent already wrote.
+- **Not a source-code indexer.** No reading, embedding or uploading of code; no
+  vector database. Search is lexical.
+- **Not a git replacement.** Git versions code. StateNest never writes to source
+  repositories and syncs only its own memory.
+- **Not a hosted service.** No cloud, no account, no telemetry. Sync is optional
+  and goes to a private git repository the user owns.
+- **Not primarily a task manager.** It has tasks because "what next" is part of
+  the answer, not because it competes with a to-do app.
+- **Not a filesystem watcher.** No daemon, nothing observing the disk.
+
+---
+
 ## Current limitations
 
 State these plainly. They are the credibility.
@@ -270,12 +288,12 @@ are covered by tests that run in CI, and the threat model is in
 
 ## Words to avoid
 
-| Avoid | Because |
-| --- | --- |
-| "remembers everything" | It stores structured state and selected checkpoints, not everything |
-| "AI memory" / "your agent's brain" | Suggests transcript archival or a vector database; neither exists |
-| "secure", "guaranteed", "cannot leak" | Absolute claims the implementation cannot support |
-| "syncs your projects" | Ambiguous — it syncs its own memory, never your source code |
-| "works with any agent" | Only the Claude Code adapter is implemented |
-| "enterprise-ready", "battle-tested" | It is v0.2.0 |
-| "zero-config" | There is a setup step; the accurate claim is zero *daily* commands |
+| Avoid                                 | Because                                                             |
+| ------------------------------------- | ------------------------------------------------------------------- |
+| "remembers everything"                | It stores structured state and selected checkpoints, not everything |
+| "AI memory" / "your agent's brain"    | Suggests transcript archival or a vector database; neither exists   |
+| "secure", "guaranteed", "cannot leak" | Absolute claims the implementation cannot support                   |
+| "syncs your projects"                 | Ambiguous — it syncs its own memory, never your source code         |
+| "works with any agent"                | Only the Claude Code adapter is implemented                         |
+| "enterprise-ready", "battle-tested"   | It is v0.2.0                                                        |
+| "zero-config"                         | There is a setup step; the accurate claim is zero _daily_ commands  |

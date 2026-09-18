@@ -3,6 +3,10 @@
 Thanks for being here. StateNest is a tool people trust with metadata about
 all of their work, so the bar is correctness and clarity over speed.
 
+If you are a coding agent rather than a person, read
+[AGENTS.md](AGENTS.md) instead — it covers the invariants, commands and testing
+rules in the form you need.
+
 ## Getting set up
 
 ```bash
@@ -56,7 +60,7 @@ projects matching "api"')` tells a future reader what the product promises.
 **Never weaken a test to make it pass.** If a test fails, either the code is
 wrong or the test encodes the wrong expectation — say which, in the PR. A
 recurring trap: fixtures for format-validated inputs (token lengths, checksums)
-should be *generated* from the constraint, not typed by hand.
+should be _generated_ from the constraint, not typed by hand.
 
 **Comments that explain why.** The code already says what it does. A comment
 earns its place by explaining a decision, a constraint, or a bug it prevents.
@@ -66,13 +70,13 @@ user cannot act on is an unfinished error.
 
 ## Things that need extra care
 
-| Area | Why |
-| --- | --- |
-| `src/security/` | Changing a pattern changes what leaks. Add tests both ways: it detects the real thing, and it does not fire on the lookalike. |
-| `src/git/remote-url.ts` | Project identity. A change here can split one project in two across machines, or merge two into one. |
-| `src/storage/` | Data loss lives here. Writes are atomic; keep them that way. |
-| `src/integrations/claude/` | Runs inside someone else's tool. It must never exit non-zero, never block, and never exceed its deadline. |
-| Anything touching a user's repository | StateNest **reads** source repositories. It must never write to one. There is a test enforcing this; do not skip it. |
+| Area                                  | Why                                                                                                                           |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `src/security/`                       | Changing a pattern changes what leaks. Add tests both ways: it detects the real thing, and it does not fire on the lookalike. |
+| `src/git/remote-url.ts`               | Project identity. A change here can split one project in two across machines, or merge two into one.                          |
+| `src/storage/`                        | Data loss lives here. Writes are atomic; keep them that way.                                                                  |
+| `src/integrations/claude/`            | Runs inside someone else's tool. It must never exit non-zero, never block, and never exceed its deadline.                     |
+| Anything touching a user's repository | StateNest **reads** source repositories. It must never write to one. There is a test enforcing this; do not skip it.          |
 
 ## Architecture rules
 

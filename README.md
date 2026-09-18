@@ -176,6 +176,31 @@ and has no vector database.
 
 ---
 
+## What StateNest is not
+
+Stated as plainly as what it is, because each of these is a reasonable thing to
+assume and all of them are wrong.
+
+- **Not a transcript archive.** It does not store your conversations. The
+  checkpoints it writes come from the compaction summary Claude Code has already
+  produced, and no second model is ever run.
+- **Not a source-code indexer.** It does not read, embed or upload your code. A
+  fixed list of manifest files and a README are read for a description; nothing
+  else. Search is lexical, over what you wrote down — there is no vector
+  database ([ADR 0007](docs/adr/0007-lexical-search-not-embeddings.md)).
+- **Not a git replacement.** Git versions your code; StateNest never writes to
+  your source repositories. What it syncs is its own memory, separately.
+- **Not a hosted service.** There is no StateNest cloud, no account, no sign-up
+  and no telemetry. Sync is optional and goes to a private git repository you
+  create and own.
+- **Not primarily a task manager.** It has tasks, because "what was I about to
+  do next" is part of the answer. If a to-do list is what you want, use a to-do
+  list.
+- **Not a filesystem watcher.** Nothing runs in the background watching your
+  disk. There is no daemon at all.
+
+---
+
 ## Machines and servers
 
 A **machine** is a computer you work on. A **remote** is a server. A
@@ -280,6 +305,11 @@ day. That is where the bugs come from and how they get found.
 - No adoption claims: this is a young project. Please
   [report issues](https://github.com/Emin4ik/StateNest/issues).
 
+What works today, what does not, and the tests behind each claim:
+[project status](docs/project-status.md). Platforms, Node and Claude Code
+versions, and what is tested versus merely supported:
+[compatibility](docs/compatibility.md).
+
 ---
 
 ## The CLI, when you want to look
@@ -326,6 +356,9 @@ active  ·  3d ago
 Every command takes `--json`. The full list, with options, is in the
 [command reference](docs/command-reference.md).
 
+To watch the whole two-machine flow happen against throwaway fixtures:
+`npm run demo:zero-touch` (see [the demo script](docs/demo-script.md)).
+
 ---
 
 ## Requirements
@@ -356,6 +389,8 @@ npm audit signatures
 | [Data model](docs/data-model.md)               | Every file and field on disk                  |
 | [Architecture](docs/architecture/overview.md)  | How it is put together                        |
 | [Positioning](docs/positioning.md)             | How to describe StateNest accurately          |
+| [Project status](docs/project-status.md)       | What works, what does not, with evidence      |
+| [Compatibility](docs/compatibility.md)         | Tested, supported and untested                |
 | [Troubleshooting](docs/troubleshooting.md)     | When something is wrong                       |
 
 Agents and AI assistants: [llms.txt](llms.txt) is a short, curated entry point to

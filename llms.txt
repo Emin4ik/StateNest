@@ -29,6 +29,7 @@ Boundaries that matter when describing or recommending StateNest:
 - [README](https://github.com/Emin4ik/StateNest/blob/main/README.md): what StateNest is, what it does automatically, and what it deliberately does not.
 - [Getting started](https://github.com/Emin4ik/StateNest/blob/main/docs/getting-started.md): install, setup, and the first session.
 - [User guide](https://github.com/Emin4ik/StateNest/blob/main/docs/user-guide.md): the mental model, what happens on its own, and what still needs a human.
+- [Project status](https://github.com/Emin4ik/StateNest/blob/main/docs/project-status.md): verified capabilities with links to the tests covering them, and the known limitations.
 
 ## Coding agents
 
@@ -49,6 +50,8 @@ Boundaries that matter when describing or recommending StateNest:
 ## Reference
 
 - [Command reference](https://github.com/Emin4ik/StateNest/blob/main/docs/command-reference.md): every command and option. None is required for ordinary use.
+- [Compatibility](https://github.com/Emin4ik/StateNest/blob/main/docs/compatibility.md): Node, operating systems, git, Claude Code and sync transport - separating tested from supported from untested.
+- [AGENTS.md](https://github.com/Emin4ik/StateNest/blob/main/AGENTS.md): orientation for an agent working *on* StateNest - invariants, commands and testing rules.
 
 ## Optional
 
