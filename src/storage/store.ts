@@ -21,6 +21,7 @@ import {
   type TaskFile,
 } from '../core/schema.js';
 import { readYamlFile, writeYamlFile, type LoadIssue } from './yaml-file.js';
+import type { RecordKind } from '../core/migrations.js';
 import {
   extractListItems,
   extractSections,
@@ -62,7 +63,7 @@ export class Store {
   // -------------------------------------------------------------------------
 
   async readProfile(): Promise<Profile | null> {
-    const { value, issue } = await readYamlFile(this.paths.profileFile, ProfileSchema);
+    const { value, issue } = await readYamlFile(this.paths.profileFile, ProfileSchema, 'profile');
     this.record(issue);
     return value;
   }
@@ -83,13 +84,13 @@ export class Store {
 
   private async readProjectAtDir(dirName: string): Promise<Project | null> {
     const file = join(this.paths.projectsDir, dirName, 'project.yaml');
-    const { value, issue } = await readYamlFile(file, ProjectSchema);
+    const { value, issue } = await readYamlFile(file, ProjectSchema, 'project');
     this.record(issue);
     return value;
   }
 
   async getProject(projectId: string): Promise<Project | null> {
-    const { value, issue } = await readYamlFile(this.paths.projectFile(projectId), ProjectSchema);
+    const { value, issue } = await readYamlFile(this.paths.projectFile(projectId), ProjectSchema, 'project');
     this.record(issue);
     return value;
   }
@@ -132,7 +133,7 @@ export class Store {
   // -------------------------------------------------------------------------
 
   async readTasks(projectId: string): Promise<TaskFile> {
-    const { value, issue } = await readYamlFile(this.paths.tasksFile(projectId), TaskFileSchema);
+    const { value, issue } = await readYamlFile(this.paths.tasksFile(projectId), TaskFileSchema, 'tasks');
     this.record(issue);
     return value ?? { schema_version: SCHEMA_VERSION, project_id: projectId, tasks: [] };
   }
@@ -296,11 +297,11 @@ export class Store {
   // -------------------------------------------------------------------------
 
   async listMachines(): Promise<Machine[]> {
-    return this.readAllYaml(this.paths.machinesDir, MachineSchema);
+    return this.readAllYaml(this.paths.machinesDir, MachineSchema, 'machine');
   }
 
   async getMachine(machineId: string): Promise<Machine | null> {
-    const { value, issue } = await readYamlFile(this.paths.machineFile(machineId), MachineSchema);
+    const { value, issue } = await readYamlFile(this.paths.machineFile(machineId), MachineSchema, 'machine');
     this.record(issue);
     return value;
   }
@@ -310,11 +311,11 @@ export class Store {
   }
 
   async listRemotes(): Promise<Remote[]> {
-    return this.readAllYaml(this.paths.remotesDir, RemoteSchema);
+    return this.readAllYaml(this.paths.remotesDir, RemoteSchema, 'remote');
   }
 
   async getRemote(remoteId: string): Promise<Remote | null> {
-    const { value, issue } = await readYamlFile(this.paths.remoteFile(remoteId), RemoteSchema);
+    const { value, issue } = await readYamlFile(this.paths.remoteFile(remoteId), RemoteSchema, 'remote');
     this.record(issue);
     return value;
   }
@@ -330,11 +331,12 @@ export class Store {
   private async readAllYaml<S extends z.ZodType<object>>(
     dir: string,
     schema: S,
+    kind: RecordKind,
   ): Promise<z.infer<S>[]> {
     const names = await listFiles(dir, '.yaml');
     const records = await Promise.all(
       names.map(async (name) => {
-        const { value, issue } = await readYamlFile(join(dir, name), schema);
+        const { value, issue } = await readYamlFile(join(dir, name), schema, kind);
         this.record(issue);
         return value;
       }),

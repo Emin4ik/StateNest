@@ -1,6 +1,7 @@
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import type { z } from 'zod';
 import { BrainError } from '../util/errors.js';
+import { migrateRecord, type RecordKind } from '../core/migrations.js';
 import { readFileOrNull, writeFileAtomic } from '../util/fs-atomic.js';
 import { contractHome } from '../util/paths.js';
 
@@ -43,6 +44,12 @@ export function serializeYaml(value: unknown): string {
 export async function readYamlFile<S extends z.ZodType>(
   filePath: string,
   schema: S,
+  /**
+   * When given, a record written by an older Project Brain is migrated forward
+   * in memory before validation. Nothing is written back here - `pb migrate`
+   * does that, after taking a backup.
+   */
+  kind?: RecordKind,
 ): Promise<LoadResult<z.infer<S>>> {
   const raw = await readFileOrNull(filePath);
   if (raw === null) return { value: null, issue: null };
@@ -61,7 +68,11 @@ export async function readYamlFile<S extends z.ZodType>(
     return { value: null, issue: { filePath, reason: 'file is empty' } };
   }
 
-  const result = schema.safeParse(parsed);
+  // Migrate before validating: a pre-release record is not invalid, it is old,
+  // and rejecting it would make the user's own data unreadable to them.
+  const candidate = kind ? migrateRecord(kind, parsed).value : parsed;
+
+  const result = schema.safeParse(candidate);
   if (!result.success) {
     return {
       value: null,

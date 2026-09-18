@@ -3,6 +3,7 @@ import { access, mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/pr
 import { dirname, join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { errnoCode } from './errors.js';
+import { assertWritable } from './write-guard.js';
 
 /**
  * Durable file replacement.
@@ -20,6 +21,7 @@ export async function writeFileAtomic(
   data: string | Uint8Array,
   options: { mode?: number } = {},
 ): Promise<void> {
+  assertWritable(filePath);
   const dir = dirname(filePath);
   await mkdir(dir, { recursive: true });
 
@@ -91,6 +93,7 @@ function delay(ms: number): Promise<void> {
  * concurrent Claude Code sessions without a lock.
  */
 export async function appendLine(filePath: string, line: string): Promise<void> {
+  assertWritable(filePath);
   await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, `${line}\n`, { flag: 'a', mode: 0o600 });
 }
@@ -114,5 +117,6 @@ export async function pathExists(filePath: string): Promise<boolean> {
 }
 
 export async function ensureDir(dir: string): Promise<void> {
+  assertWritable(dir);
   await mkdir(dir, { recursive: true });
 }

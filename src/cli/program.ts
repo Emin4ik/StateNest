@@ -24,6 +24,7 @@ import { syncCommand } from './commands/sync.js';
 import { dashboardCommand } from './commands/dashboard.js';
 import { exportCommand, importCommand } from './commands/export.js';
 import { uninstallCommand } from './commands/uninstall.js';
+import { migrateCommand } from './commands/migrate.js';
 
 /**
  * The `pb` command tree.
@@ -104,6 +105,7 @@ export function buildProgram(version: string): Command {
   // Backup and removal
   program.addCommand(exportCommand());
   program.addCommand(importCommand());
+  program.addCommand(migrateCommand());
   program.addCommand(uninstallCommand());
 
   program.addHelpText(

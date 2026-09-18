@@ -172,7 +172,7 @@ export class Workspace {
 }
 
 export async function readConfig(paths: BrainPaths): Promise<Config> {
-  const { value, issue } = await readYamlFile(paths.configFile, ConfigSchema);
+  const { value, issue } = await readYamlFile(paths.configFile, ConfigSchema, 'config');
   if (issue) {
     throw new BrainError('CORRUPT_CONFIG', `Could not read ${contractHome(paths.configFile)}`, {
       details: [issue.reason],
