@@ -93,6 +93,38 @@ export async function withFileLock<T>(
   }
 }
 
+/**
+ * Run `work` only if the lock is free, and do nothing at all if it is not.
+ *
+ * The opposite bargain from `withFileLock`. That one guards a counter, where a
+ * possibly-lost increment beats delaying somebody's session, so it proceeds
+ * without the lock. This one guards sync, where running twice at once means two
+ * processes driving git in the same directory - so a contended lock must mean
+ * "somebody else already has this", not "go ahead anyway".
+ *
+ * Returns `notRun` when the lock was held. Callers treat that as success:
+ * whoever holds it is doing the work.
+ */
+export async function withExclusiveFileLock<T>(
+  filePath: string,
+  work: () => Promise<T>,
+  notRun: T,
+  options: LockOptions = {},
+): Promise<T> {
+  const lockPath = `${filePath}.lock`;
+  const timeoutMs = options.timeoutMs ?? 0;
+  const staleMs = options.staleMs ?? DEFAULT_STALE_MS;
+
+  await mkdir(dirname(lockPath), { recursive: true }).catch(() => {});
+  if (!(await acquire(lockPath, timeoutMs, staleMs))) return notRun;
+
+  try {
+    return await work();
+  } finally {
+    await rm(lockPath, { force: true }).catch(() => {});
+  }
+}
+
 async function lockAcrossProcesses<T>(
   filePath: string,
   work: () => Promise<T>,

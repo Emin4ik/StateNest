@@ -16,15 +16,38 @@ import { effectiveActivity } from './projects.js';
 import { installClaudeIntegration, describeClaudeInstall } from '../../integrations/claude/install.js';
 import { hasLocationOnAnotherMachine } from '../../core/registry.js';
 import { updateMachineLocalState } from '../../core/machine-local.js';
+import { ProfileSync } from '../../sync/git-sync.js';
+import { writeDataRepoScaffolding } from '../../core/workspace.js';
+import { recordOutcome } from '../../sync/auto-sync.js';
 
 export function initCommand(): Command {
-  return new Command('init')
-    .description('Set up StateNest on this machine')
+  return buildSetupCommand('init', 'Set up StateNest on this machine');
+}
+
+/**
+ * The same command under the name people reach for.
+ *
+ * One implementation, two names, rather than a second onboarding path that
+ * drifts from the first. `init` is what existing scripts and documentation
+ * already say; `setup` is what someone types when they have just installed the
+ * thing and want it working.
+ */
+export function setupCommand(): Command {
+  return buildSetupCommand(
+    'setup',
+    'Set StateNest up on this machine, end to end',
+  );
+}
+
+function buildSetupCommand(name: string, description: string): Command {
+  return new Command(name)
+    .description(description)
     .option('-y, --yes', 'accept every default, ask nothing')
     .option('--machine-name <name>', 'what to call this computer')
     .option('--roots <dirs...>', 'directories that contain your projects')
     .option('--no-scan', 'set up without scanning for projects')
     .option('--no-claude', 'skip the Claude Code integration offer')
+    .option('--no-sync', 'skip the sync offer')
     .action(async (options: InitOptions) => {
       try {
         await runInit(options);
@@ -40,6 +63,7 @@ interface InitOptions {
   roots?: string[];
   scan: boolean;
   claude: boolean;
+  sync: boolean;
 }
 
 async function runInit(options: InitOptions): Promise<void> {
@@ -137,6 +161,16 @@ async function runInit(options: InitOptions): Promise<void> {
     if (wanted) claudeResult = await installClaudeIntegration({ assumeDefaults });
   }
 
+  // -- Sync ----------------------------------------------------------------
+  //
+  // Offered here because "set StateNest up" and "make this work on my other
+  // computer" are one intention, and splitting them across two commands is how
+  // a second machine ends up joined in the wrong order.
+  let syncResult: 'connected' | 'received' | 'skipped' | 'failed' = 'skipped';
+  if (options.sync !== false && !workspace.profile.sync.enabled) {
+    syncResult = await offerSync(workspace, assumeDefaults);
+  }
+
   // -- Report --------------------------------------------------------------
   const projects = await registry.all();
   const activeRecently = projects.filter((project) => isRecent(project, 30)).length;
@@ -154,6 +188,7 @@ async function runInit(options: InitOptions): Promise<void> {
       extra_copies_linked: extraCopies,
       projects_total: projects.length,
       claude_integration: claudeResult?.status ?? 'skipped',
+      sync: syncResult,
     });
     return;
   }
@@ -164,6 +199,11 @@ async function runInit(options: InitOptions): Promise<void> {
   success(`Machine registered: ${style.bold(machine.name)} ${style.dim(`(${os})`)}`);
   if (claudeResult) {
     success(`Claude Code integration: ${describeClaudeInstall(claudeResult)}`);
+  }
+  if (syncResult === 'connected') success('Sync connected');
+  if (syncResult === 'received') {
+    success('Sync connected');
+    success('Existing StateNest memory received');
   }
   if (chosenRoots.length > 0) {
     success(`${pluralize(projects.length, 'project')} discovered`);
@@ -176,12 +216,67 @@ async function runInit(options: InitOptions): Promise<void> {
   }
 
   print('');
-  print(style.dim('Try:'));
+  if (claudeResult && claudeResult.status !== 'failed') {
+    success('Ready');
+    print('');
+    print('  Open Claude Code inside a git project.');
+    print(style.dim('  StateNest will recognise it, restore your context, and remember'));
+    print(style.dim('  what happened — without you running anything.'));
+    print('');
+    print(style.dim('To look at what it knows:'));
+  } else {
+    print(style.dim('Try:'));
+  }
   print(bullet(style.cyan('statenest projects')));
   print(bullet(style.cyan('statenest recent')));
   print(bullet(style.cyan('statenest resume <project>')));
   print(bullet(style.cyan('statenest doctor')));
   print('');
+}
+
+/**
+ * Offer to connect this profile to the user's own private repository.
+ *
+ * Joining an established profile and starting a new one are the same two
+ * commands in the same order, so the user never has to know which case they
+ * are in - the sync itself works that out. That is the whole point of doing it
+ * here rather than leaving `sync init` to be discovered later.
+ */
+async function offerSync(
+  workspace: Workspace,
+  assumeDefaults: boolean,
+): Promise<'connected' | 'received' | 'skipped' | 'failed'> {
+  if (assumeDefaults) return 'skipped';
+
+  const wanted = await confirm('\nSync across your computers?', { defaultValue: false });
+  if (!wanted) return 'skipped';
+
+  print('');
+  print(style.dim('  A PRIVATE git repository you own. It will hold project names,'));
+  print(style.dim('  notes, server addresses and deploy paths — never credentials.'));
+  const remote = (await ask('  Private repository')).trim();
+  if (remote === '') return 'skipped';
+
+  try {
+    const sync = new ProfileSync(workspace.profilePaths, workspace.paths.home);
+    await sync.initialise(remote);
+    await writeDataRepoScaffolding(workspace.profilePaths);
+    await workspace.saveProfile({
+      ...workspace.profile,
+      sync: { ...workspace.profile.sync, enabled: true, remote, branch: 'main' },
+    });
+
+    // Run it now. A setup that ends with "and it might work later" is not a
+    // setup; joining an existing profile has to visibly succeed here.
+    const result = await sync.sync();
+    await recordOutcome(workspace, result);
+    return result.pulled > 0 ? 'received' : result.outcome === 'offline' ? 'failed' : 'connected';
+  } catch {
+    print('');
+    print(style.yellow('  Could not connect sync. Everything else is set up.'));
+    print(style.dim('  You can try again with: statenest sync init <url>'));
+    return 'failed';
+  }
 }
 
 function printWelcome(): void {

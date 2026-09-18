@@ -90,7 +90,7 @@ statenest/
 flat map also loads — but we use the documented wrapper form.
 
 Our server is registered as `plugin:statenest:brain`, and its tools appear
-to the model as `mcp__plugin_statenest_brain__projectbrain_*`.
+to the model as `mcp__plugin_statenest_brain__statenest_*`.
 
 ### Exec form vs shell form
 

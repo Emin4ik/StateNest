@@ -1,5 +1,7 @@
 import { Workspace } from '../../core/workspace.js';
 import { Registry } from '../../core/registry.js';
+import type { Project } from '../../core/schema.js';
+import type { FastRepoInfo } from '../../git/repo.js';
 import { buildResumeBrief, renderSessionContext } from '../../core/context.js';
 import { appendLine } from '../../util/fs-atomic.js';
 import { now } from '../../util/time.js';
@@ -67,6 +69,25 @@ const EVENT_NAMES: Record<HandlerName, HookEventName> = {
  * testable. `hook.ts` is the thin process entry that calls this.
  */
 export async function runHook(handlerName: string, rawInput: string): Promise<string> {
+  // Not a Claude Code event. This is the plugin re-invoking itself, detached,
+  // to run a sync that a hook asked for and refused to wait around for. It has
+  // no deadline because nobody is waiting on it.
+  if (handlerName === 'auto-sync' || handlerName === 'auto-sync-now') {
+    try {
+      const { performAutoSync } = await import('../../sync/auto-sync.js');
+      // `-now` is the session-start refresh: somebody is waiting a few hundred
+      // milliseconds for it, so it skips the debounce that exists to coalesce
+      // write bursts. Waiting 1.5s to start would have made the refresh budget
+      // impossible to meet, and the wait pointless.
+      await performAutoSync(
+        handlerName === 'auto-sync-now' ? { debounceMs: 0, force: true } : {},
+      );
+    } catch (error) {
+      await logFailure(handlerName, error);
+    }
+    return '';
+  }
+
   if (!handlerName || !(handlerName in DEADLINES)) {
     // Not an error worth surfacing: a stale hook config from an older version
     // must not spam the user.
@@ -117,7 +138,16 @@ async function onSessionStart(input: HookInput): Promise<string> {
   const { workspace, registry } = opened;
 
   const cwd = input.cwd ?? process.cwd();
-  const { project, repo, repoRoot } = await registry.identify(cwd, workspace.machineId);
+  const identified = await registry.identify(cwd, workspace.machineId);
+  const { repo, repoRoot } = identified;
+
+  // Register this repository if it is eligible and not yet known.
+  //
+  // This is what removes `statenest add .` from an ordinary day. It is
+  // deliberately narrow: the directory Claude was opened in, nothing above it,
+  // nothing beside it, and only when the repository has a remote that means the
+  // same thing on every machine.
+  const project = identified.project ?? (await autoRegister(registry, workspace, cwd, repo));
 
   // Housekeeping that must never delay the session; failures are irrelevant.
   void pruneSessionRecords(workspace.paths).catch(() => {});
@@ -141,16 +171,26 @@ async function onSessionStart(input: HookInput): Promise<string> {
   }
 
   if (!project) {
-    // An unregistered directory gets no injected context. Interrupting a
-    // session to ask about registration would be exactly the kind of nagging
-    // the tool is supposed to avoid; `statenest add .` is there when the user wants it.
+    // Not eligible for automatic registration - see `autoRegister`. No context,
+    // and no nagging either; `statenest add .` is there when the user wants it.
     return '';
   }
 
-  // Record that this project was touched, without blocking the response.
-  void registry
+  // Record that this project was touched here.
+  //
+  // Awaited, unlike most bookkeeping. This is what links a second clone on the
+  // same machine, or the first clone on a new one, and a hook process is
+  // short-lived enough that a fire-and-forget write can simply not happen - so
+  // "the same repository at a new path" would sometimes be remembered and
+  // sometimes not. It is one small file write against an already-cached record.
+  await registry
     .touchActivity(project.id, workspace.machineId, repoRoot ?? cwd, repo)
-    .catch(() => {});
+    .catch(() => null);
+
+  // Give a stale profile a brief chance to catch up before the brief is built,
+  // so work finished on another machine an hour ago is already in front of
+  // Claude. Strictly bounded, and it never decides whether the session starts.
+  if (await refreshIfStale(workspace)) registry.invalidate();
 
   const machine = await workspace.currentMachine();
   const brief = await buildResumeBrief(workspace.store, project, {
@@ -163,6 +203,164 @@ async function onSessionStart(input: HookInput): Promise<string> {
   });
 
   return buildHookResponse('SessionStart', { additionalContext: context });
+}
+
+/**
+ * Register the repository Claude was opened in, if it is safe to.
+ *
+ * Eligibility is one rule: **a git repository whose remote identifies it the
+ * same way on every machine.** That is the whole test, and everything it rules
+ * out is deliberate.
+ *
+ * - *Not a git repository* - `~/Downloads/scratch`, `/tmp/foo`. Opening Claude
+ *   somewhere is not a statement that it is a project.
+ * - *A git repository with no remote.* A project with no remote gets a random
+ *   id, which cannot merge with the same directory on another machine. Creating
+ *   those automatically would quietly fill a synced profile with one entry per
+ *   machine for what the user thinks is one project. `statenest add .` still
+ *   registers it, because then the user has said so.
+ *
+ * Nothing is scanned. The parent directory is not examined, the home directory
+ * is not walked, and no file is read that `statenest add` would not read.
+ */
+async function autoRegister(
+  registry: Registry,
+  workspace: Workspace,
+  cwd: string,
+  repo: FastRepoInfo | null,
+): Promise<Project | null> {
+  if (!repo?.primaryRemote?.stableAcrossMachines) return null;
+
+  try {
+    const result = await registry.register(cwd, { machineId: workspace.machineId });
+    // A newly known project is worth sending to the other machines.
+    void scheduleSyncQuietly(workspace);
+    return result.project;
+  } catch {
+    // A registration that fails must not cost the user their session context.
+    return null;
+  }
+}
+
+/**
+ * A sync StateNest already did counts as fresh for this long.
+ *
+ * Long enough that a run of sessions in one afternoon never waits, short enough
+ * that the first session of the day does.
+ */
+const FRESH_WINDOW_MS = 5 * 60_000;
+
+/**
+ * The most a session start will ever wait for the network.
+ *
+ * Chosen against the 2.5s handler deadline, not against how long a sync takes.
+ * The rule is that Claude starts on time and StateNest catches up afterwards -
+ * never the other way round - so this is a budget, not a timeout to be raised
+ * when a remote turns out to be slow.
+ */
+const STARTUP_SYNC_BUDGET_MS = 700;
+
+/**
+ * How long a failed attempt suppresses the next session's wait.
+ *
+ * Being offline is usually a state, not an event: a laptop on a train starts
+ * many sessions and the answer is the same every time. Without this, every one
+ * of them pays to rediscover it. The sync is still scheduled in the background;
+ * only the waiting is skipped.
+ */
+const OFFLINE_BACKOFF_MS = 60_000;
+
+/**
+ * Bring the profile up to date before building the brief, if there is time.
+ *
+ * The sync itself runs detached, so it finishes whatever happens here. This
+ * only decides whether to wait a moment for it. Returns true when fresh data
+ * actually arrived, which is the caller's cue to re-read.
+ */
+async function refreshIfStale(workspace: Workspace): Promise<boolean> {
+  try {
+    const { readMachineLocalState } = await import('../../core/machine-local.js');
+    const local = await readMachineLocalState(
+      workspace.paths,
+      workspace.profile.name,
+      workspace.profile,
+    );
+
+    if (!local.auto_sync) return false;
+    if (!workspace.profile.sync.enabled || !workspace.profile.sync.remote) return false;
+
+    // Recently found unreachable? Do not spend this session's budget proving it
+    // again. Still schedule one, so the moment the network returns, it syncs.
+    const attemptAge = local.last_sync_attempt_at
+      ? Date.now() - Date.parse(local.last_sync_attempt_at)
+      : Infinity;
+    if (
+      local.sync_health.state === 'offline' &&
+      Number.isFinite(attemptAge) &&
+      attemptAge < OFFLINE_BACKOFF_MS
+    ) {
+      void scheduleSyncQuietly(workspace);
+      return false;
+    }
+
+    const since = local.last_sync_at ? Date.now() - Date.parse(local.last_sync_at) : Infinity;
+    if (Number.isFinite(since) && since < FRESH_WINDOW_MS) {
+      // Already fresh. Still ask for a sync so the *next* session is too, but
+      // do not spend a millisecond of this one waiting for it.
+      void scheduleSyncQuietly(workspace);
+      return false;
+    }
+
+    await scheduleSyncQuietly(workspace, 'auto-sync-now');
+
+    // Watch for the detached run to land. Polling a small local file is far
+    // cheaper than holding the sync open in this process, and it means an
+    // over-budget sync is abandoned by the waiter, not cancelled.
+    const deadline = Date.now() + STARTUP_SYNC_BUDGET_MS;
+    const before = local.last_sync_at;
+    const beforeAttempt = local.last_sync_attempt_at;
+
+    while (Date.now() < deadline) {
+      // Not `unref`'d: an unref'd timer lets the process exit before it fires,
+      // which would make this whole wait quietly do nothing in a real hook.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const current = await readMachineLocalState(
+        workspace.paths,
+        workspace.profile.name,
+        workspace.profile,
+      );
+      if (current.last_sync_at && current.last_sync_at !== before) return true;
+
+      // The attempt finished and did not bring anything back - offline, or a
+      // conflict waiting to be repaired. Waiting out the rest of the budget
+      // would buy nothing, and being offline should not tax every session.
+      if (current.last_sync_attempt_at && current.last_sync_attempt_at !== beforeAttempt) {
+        return false;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Ask for a background sync without ever making the caller wait for one.
+ *
+ * Every call site is on a latency budget inside somebody else's tool, so this
+ * swallows everything: a sync that cannot be scheduled is not a reason for a
+ * hook to misbehave.
+ */
+async function scheduleSyncQuietly(
+  workspace: Workspace,
+  entry: 'auto-sync' | 'auto-sync-now' = 'auto-sync',
+): Promise<void> {
+  try {
+    const { scheduleAutoSync, selfRunner } = await import('../../sync/auto-sync.js');
+    await scheduleAutoSync(workspace, selfRunner([entry]));
+  } catch {
+    // Ignored on purpose.
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -316,6 +514,10 @@ async function onPostCompact(input: HookInput): Promise<string> {
     }));
   }
 
+  // A checkpoint is the most valuable thing StateNest writes, and the moment
+  // it exists is the moment another machine should be able to see it.
+  await scheduleSyncQuietly(workspace);
+
   return '';
 }
 
@@ -384,6 +586,11 @@ async function onSessionEnd(input: HookInput): Promise<string> {
       sessionId: input.session_id,
     },
   );
+
+  // Detached, so the push outlives this hook. SessionEnd is killed at roughly
+  // 1.5 seconds; a sync is not going to finish inside that, and the checkpoint
+  // must not be at risk of being cut short waiting for one.
+  await scheduleSyncQuietly(workspace);
 
   return '';
 }

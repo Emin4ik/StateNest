@@ -6,7 +6,7 @@ argument-hint: "[project name]"
 
 # Where does this project live?
 
-1. Call `projectbrain_where` with the project name.
+1. Call `statenest_where` with the project name.
 2. Report the local copies (with machine names) and every deployment, including
    ssh alias, host, deploy path and service name.
 

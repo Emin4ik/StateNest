@@ -90,3 +90,19 @@ export function reportLateIssues(context: CommandContext, alreadyReported = 0): 
   if (issues.length === 0 || globals.quiet || globals.json) return;
   warn(`${issues.length} file(s) could not be read while running this command. Run: statenest doctor`);
 }
+
+/**
+ * Ask for a background sync after a write that another machine would want.
+ *
+ * Called from the write commands rather than from the store, so that reads and
+ * bookkeeping never schedule anything. Swallows everything: a sync that cannot
+ * be scheduled is not a reason for `statenest checkpoint` to fail.
+ */
+export async function scheduleSyncAfterWrite(workspace: Workspace): Promise<void> {
+  try {
+    const { scheduleAutoSync, selfRunner } = await import('../sync/auto-sync.js');
+    await scheduleAutoSync(workspace, selfRunner(['sync', 'background']));
+  } catch {
+    // Ignored on purpose.
+  }
+}

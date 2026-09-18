@@ -12,8 +12,8 @@ of what you are doing across every project, machine and server you have — kept
 in plain files on your computer.
 
 It is not a note-taking app, not a task manager, and not a chat-history
-archive. The one question it exists to answer is *"what was I doing, where, and
-what did I decide?"* — weeks later, on whichever machine you happen to be at.
+archive. The one question it exists to answer is _"what was I doing, where, and
+what did I decide?"_ — weeks later, on whichever machine you happen to be at.
 
 ### What it connects
 
@@ -59,7 +59,7 @@ cannot merge with a copy elsewhere, because there is nothing to match on.
 
 - **Your source code.** It reads a handful of manifest files and a README for a
   description. It does not index, copy or upload your code.
-- **`.env` files or anything inside them.** The filename is checked *before* the
+- **`.env` files or anything inside them.** The filename is checked _before_ the
   file is opened.
 - **SSH keys, passwords, API tokens.**
 - **Raw Claude Code transcripts.** Ever.
@@ -79,22 +79,36 @@ repository you own.
 ```bash
 npm install -g statenest      # requires Node.js 22.12 or newer
 statenest --version
-statenest init
+statenest setup
 statenest doctor
-statenest integrate claude    # optional, if you use Claude Code
 ```
 
-`statenest init` tells you exactly what it stores *before* it writes anything,
-registers this machine, and offers to scan for projects.
+`statenest setup` tells you exactly what it stores _before_ it writes anything,
+registers this machine, offers to scan for projects, installs the Claude Code
+integration, and offers to connect sync to a private git repository you own.
+(`statenest init` is the same command; `integrate claude` and `sync init` do the
+last two steps separately if you skipped them.)
+
+### Then nothing
+
+```bash
+cd ~/Projects/example
+claude
+```
+
+This is the intended everyday use. Opening Claude Code inside a git repository
+is enough — see [What happens on its own](#8-what-happens-on-its-own). The
+commands in this guide are for inspecting what StateNest knows and for
+deliberate control; none of them is required to keep it working.
 
 ### Which commands care where you are
 
-| Run from anywhere | Usually run inside a project |
-| --- | --- |
-| `init`, `doctor`, `projects`, `recent`, `status`, `search` | `checkpoint` |
-| `resume <project>`, `show <project>`, `where <project>` | `add .` |
-| `scan <dir>`, `machine`, `remote`, `profile`, `sync` | `task add`, `decision add` |
-| `integrate`, `privacy`, `dashboard`, `export`, `import` | `scan .` |
+| Run from anywhere                                          | Usually run inside a project |
+| ---------------------------------------------------------- | ---------------------------- |
+| `init`, `doctor`, `projects`, `recent`, `status`, `search` | `checkpoint`                 |
+| `resume <project>`, `show <project>`, `where <project>`    | `add .`                      |
+| `scan <dir>`, `machine`, `remote`, `profile`, `sync`       | `task add`, `decision add`   |
+| `integrate`, `privacy`, `dashboard`, `export`, `import`    | `scan .`                     |
 
 Commands that act on "the current project" work out which one you mean from your
 working directory. `task`, `decision` and `checkpoint` all accept
@@ -121,14 +135,14 @@ at where you are — it is not special.
 This matters, because it is easy to assume it does more than it does.
 
 1. **It looks for git repositories.** A directory carrying a `.git` **marker**
-   is a candidate. The marker is a `.git` *directory* in an ordinary clone, or
-   a `.git` *file* in a linked worktree or a submodule — both count. That is
+   is a candidate. The marker is a `.git` _directory_ in an ordinary clone, or
+   a `.git` _file_ in a linked worktree or a submodule — both count. That is
    the default rule.
 2. **It descends recursively**, breadth-first, to a maximum depth of **8** by
    default (`--depth <n>` to change it, or `discovery.max_depth` in your
    config).
 3. **It stops descending once it finds a repository root.** A repository inside a
-   repository — a vendored dependency, a submodule — is *not* registered unless
+   repository — a vendored dependency, a submodule — is _not_ registered unless
    you pass `--nested`. This is deliberate: most nested repositories are
    somebody else's code.
 4. **`--include-non-git` widens the net** to directories that merely look like
@@ -208,18 +222,18 @@ then on, Claude Code calls StateNest at five points in a session's life.
 
 > **`statenest scan` does not read Claude Code history.** It never has and it
 > never will. Scanning finds git repositories on disk. Everything StateNest
-> knows about your *sessions* comes from the plugin, from the moment you
+> knows about your _sessions_ comes from the plugin, from the moment you
 > installed it onwards.
 
 ### The session lifecycle
 
-| Hook | What StateNest does |
-| --- | --- |
+| Hook             | What StateNest does                                                                                                                                                                                   |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **SessionStart** | Works out the project from your working directory and its repository identity, then injects a compact resume brief — roughly 600 characters of what you were doing, what is blocked and what is next. |
-| **Stop** | Records session activity and turn count, and associates the running session with a registered project where it can. |
-| **PreCompact** | Captures git metadata — branch, commit, dirty state — just before context is compacted. |
-| **PostCompact** | Reuses the compact summary Claude Code has **already generated** to write a semantic checkpoint. No second model is invoked. |
-| **SessionEnd** | Writes a metadata checkpoint if the session did meaningful work and no checkpoint was written already. |
+| **Stop**         | Records session activity and turn count, and associates the running session with a registered project where it can.                                                                                   |
+| **PreCompact**   | Captures git metadata — branch, commit, dirty state — just before context is compacted.                                                                                                               |
+| **PostCompact**  | Reuses the compact summary Claude Code has **already generated** to write a semantic checkpoint. No second model is invoked.                                                                          |
+| **SessionEnd**   | Writes a metadata checkpoint if the session did meaningful work and no checkpoint was written already.                                                                                                |
 
 ### Four things to understand
 
@@ -232,7 +246,7 @@ then on, Claude Code calls StateNest at five points in a session's life.
 4. **A rich checkpoint comes from PostCompact or from you.** SessionEnd alone
    may only preserve metadata: branch, commit, that work happened. If a short,
    important session never compacted, run `/statenest:checkpoint` before you
-   finish — otherwise the *meaning* of that session is lost even though the
+   finish — otherwise the _meaning_ of that session is lost even though the
    metadata is kept.
 
 ### The skills
@@ -364,14 +378,101 @@ worth thirty seconds.
 
 ---
 
+## 8. What happens on its own
+
+Once the Claude Code integration is installed, an ordinary day needs no
+StateNest commands. This is exactly what it does, and exactly what it does not.
+
+### Automatic
+
+| When                                                       | What                                                                                                                                                                                                                 |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| You open Claude Code in a git repository **with a remote** | If it is not registered, StateNest registers it, using the same name, type and description logic as `statenest add`. If it is registered elsewhere, this path is linked as another location of the same project.     |
+| Session start                                              | Your previous context is injected — last session, blockers, next actions. If the profile is stale and sync is connected, StateNest gives it a few hundred milliseconds to catch up first, and carries on regardless. |
+| Claude Code compacts                                       | The summary it already generated becomes a checkpoint. No second model is ever run.                                                                                                                                  |
+| Session end                                                | A checkpoint, if the session did something and one was not written already.                                                                                                                                          |
+| After anything worth sharing                               | A sync, in the background, with a short pause so a burst of writes costs one push.                                                                                                                                   |
+
+### Not automatic
+
+- **A repository with no git remote is not registered.** A project's identity is
+  a hash of its remote; without one it gets a random id that cannot merge with
+  the same directory on another machine, so registering it automatically would
+  fill a shared profile with per-machine duplicates. `statenest add .` registers
+  it, because then you have said so.
+- **A directory that is not a git repository is not registered.** Opening Claude
+  Code in `~/Downloads` is not a statement that it is a project.
+- **Nothing is scanned.** StateNest looks at the repository Claude was opened
+  in. Not its parent, not its siblings, not your home directory. `statenest scan`
+  is still how you register things in bulk, when you ask for it.
+- **A short session that never compacted** leaves metadata, not meaning. Run
+  `/statenest:checkpoint` if it mattered.
+- **A genuine conflict is never resolved for you.** See below.
+
+### When sync cannot do its job
+
+Nothing here interrupts you or loses local work.
+
+| State                                      | What it means                                                                                | What to do                               |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `✓ StateNest is up to date`                | Everything on this machine is on your other machines too                                     | Nothing                                  |
+| `○ Offline — local memory is safe`         | The repository could not be reached                                                          | Nothing; it retries by itself            |
+| `○ Local updates waiting to sync`          | Written here, not sent yet                                                                   | Nothing, or `statenest sync` to send now |
+| `⚠ n item(s) need your attention`          | Two machines changed the same record. Both versions are kept and your local data still works | `statenest sync repair`                  |
+| `⚠ Sync paused … may contain a credential` | The secret scanner found something; nothing was sent                                         | `statenest privacy audit`                |
+
+`statenest sync status` and `statenest doctor` both show this. Neither one is
+printed on top of your other commands.
+
+### Conflicts keep your data usable
+
+If two machines change the same record, StateNest stops — it never picks a
+winner. What it does _not_ do is leave the attempted merge half-finished: it
+unwinds it, so your local StateNest keeps working normally while the
+disagreement is outstanding. Both versions stay safe, and `statenest sync repair`
+shows you each one and asks which to keep:
+
+```
+Sync conflict
+
+  harbour — current state
+
+    This machine:
+      next: improve late-game AI
+
+    The other machine:
+      next: fix pathfinding
+
+  Which version of "harbour — current state" should StateNest keep?
+
+    1. Keep this machine
+    2. Keep the other machine
+```
+
+There is no "merge both" option, because no current record type can be safely
+combined without inventing a resolution you did not ask for.
+
+### Turning it off
+
+Automatic sync is per machine — a laptop on a metered connection can behave
+differently from a desktop. The settings live in
+`~/.statenest/local/<profile>.json`, outside the synced profile directory, so
+one machine's preference is never imposed on another:
+
+- `auto_sync` — sync by itself at all
+- `auto_push` — send during an automatic sync (false gathers locally and leaves
+  sending to an explicit `statenest sync`)
+
+---
+
 ## Where to go next
 
-| | |
-| --- | --- |
-| [Command reference](command-reference.md) | Every command and option |
-| [Multi-machine](multi-machine.md) | Two computers, VPSes, sync, and one unified view |
-| [Getting started](getting-started.md) | The short version |
-| [Claude Code](claude-code.md) | Hooks, skills, MCP tools, latency |
-| [Data model](data-model.md) | Every file and field on disk |
-| [Security model](security-model.md) | Threat model and its limits |
-| [Troubleshooting](troubleshooting.md) | When something is wrong |
+|                                           |                                                  |
+| ----------------------------------------- | ------------------------------------------------ |
+| [Command reference](command-reference.md) | Every command and option                         |
+| [Multi-machine](multi-machine.md)         | Two computers, VPSes, sync, and one unified view |
+| [Getting started](getting-started.md)     | The short version                                |
+| [Claude Code](claude-code.md)             | Hooks, skills, MCP tools, latency                |
+| [Data model](data-model.md)               | Every file and field on disk                     |
+| [Security model](security-model.md)       | Threat model and its limits                      |
+| [Troubleshooting](troubleshooting.md)     | When something is wrong                          |

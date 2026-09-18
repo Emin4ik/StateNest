@@ -73,14 +73,30 @@ cost you your checkpoints, tasks and decisions. That is a bad trade.
 
 ---
 
+## The short version
+
+```bash
+# On each computer
+npm install -g statenest
+statenest setup        # give both the same private repository
+```
+
+That is the supported path, and it handles the ordering for you. The numbered
+walkthrough below does the same thing one step at a time, for when you want to
+see exactly what happens or are adding sync to machines you already set up.
+
+---
+
 ## 1. First computer
 
 ```bash
 npm install -g statenest
-statenest init
-statenest scan ~/Projects
+statenest setup
 statenest projects
 ```
+
+`setup` offers to connect sync. If you skip it there, sections 2 and 3 do it by
+hand.
 
 ## 2. Choose the private sync repository
 
@@ -105,8 +121,12 @@ statenest sync
 
 ```bash
 npm install -g statenest
-statenest init
+statenest setup        # same private repository as the first computer
 ```
+
+`setup` joins the existing profile and receives everything already in it, in the
+right order, without you having to think about it. The rest of this section is
+what it is doing on your behalf.
 
 Use the **same profile name** as the first computer. `personal` is the default
 on both, so if you never changed it there is nothing to do. If you did:
@@ -201,7 +221,7 @@ their code.
 **Sync moves StateNest's metadata and memory. It does not move your source
 code.** Nothing clones a repository for you, and nothing is checked out.
 
-To ask *which machines have this, and where does it run*:
+To ask _which machines have this, and where does it run_:
 
 ```bash
 statenest where SCADA
@@ -228,7 +248,7 @@ nothing is confused; the listing is just easier to read.
 ## 8. Register VPSes and deployments
 
 **Do not install StateNest on a production server** to make its deployments
-visible. A server is a *record*, not a participant:
+visible. A server is a _record_, not a participant:
 
 ```bash
 statenest remote add prod-1 --host prod-1.example.com --user deploy --env production
@@ -311,13 +331,13 @@ both versions of it are still in git.
 
 ### What is machine-local, and what is shared
 
-| Lives in the synced profile | Lives on this machine only |
-| --- | --- |
-| profile name, description | when this machine last synced |
-| privacy level | this machine's scan roots |
-| sync remote and branch | this machine's id |
-| projects, checkpoints, tasks, decisions | caches and logs |
-| machines and servers | |
+| Lives in the synced profile             | Lives on this machine only    |
+| --------------------------------------- | ----------------------------- |
+| profile name, description               | when this machine last synced |
+| privacy level                           | this machine's scan roots     |
+| sync remote and branch                  | this machine's id             |
+| projects, checkpoints, tasks, decisions | caches and logs               |
+| machines and servers                    |                               |
 
 Machine-local state is `~/.statenest/local/<profile>.json`, deliberately outside
 `profiles/` so that sync cannot carry it anywhere. Your Mac scanning
@@ -335,18 +355,18 @@ profile directory that should not have; that is worth reporting.
 
 Every row below was tested.
 
-| Situation | What StateNest does |
-| --- | --- |
-| Remote empty, local populated | Commits and pushes. `synced` |
-| Remote populated, local empty | Adopts the remote history, then materialises it. `synced`. The next push does **not** delete the other machine's projects |
-| **Both** already populated, with different data | Rebases. Both sides survive. `synced` |
-| Two machines change **different** records | Both changes kept. `synced` |
-| Two machines change the **same** record | `conflict`. Both versions left in the file with markers. Nothing lost, nothing silently chosen |
-| Machine offline | `offline`. Local data untouched, every local command keeps working. Recovers on the next sync |
-| A credential is found | `blocked-by-secrets`. Nothing is committed and nothing is pushed |
-| Interrupted rebase | Reported, never reported as `synced`. Local data stays readable |
-| Same repository, two machines, different paths | One project, two locations |
-| Same repository twice on **one** machine | One project, two locations, both on that machine |
+| Situation                                       | What StateNest does                                                                                                       |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Remote empty, local populated                   | Commits and pushes. `synced`                                                                                              |
+| Remote populated, local empty                   | Adopts the remote history, then materialises it. `synced`. The next push does **not** delete the other machine's projects |
+| **Both** already populated, with different data | Rebases. Both sides survive. `synced`                                                                                     |
+| Two machines change **different** records       | Both changes kept. `synced`                                                                                               |
+| Two machines change the **same** record         | `conflict`. Both versions left in the file with markers. Nothing lost, nothing silently chosen                            |
+| Machine offline                                 | `offline`. Local data untouched, every local command keeps working. Recovers on the next sync                             |
+| A credential is found                           | `blocked-by-secrets`. Nothing is committed and nothing is pushed                                                          |
+| Interrupted rebase                              | Reported, never reported as `synced`. Local data stays readable                                                           |
+| Same repository, two machines, different paths  | One project, two locations                                                                                                |
+| Same repository twice on **one** machine        | One project, two locations, both on that machine                                                                          |
 
 **Strategy:** rebase, so history stays linear across machines. Checkpoints are
 immutable one-file-each, so there is rarely anything to resolve; the exception
@@ -390,13 +410,13 @@ remote.
 
 ## Profiles
 
-| Question | Answer |
-| --- | --- |
-| Does `statenest dashboard` show only the active profile? | Yes, unless you pass `--all-profiles` |
-| Can the dashboard show several profiles at once? | Yes, read-only, with every row labelled |
-| Can `projects`, `recent`, `status` aggregate profiles? | **No**, by design — one profile at a time |
-| Is sync strictly per profile? | Yes. `ProfileSync` operates on one profile directory |
-| Can two profiles use different private repositories? | Yes, and tested: each remote contains only its own profile's data |
+| Question                                                 | Answer                                                            |
+| -------------------------------------------------------- | ----------------------------------------------------------------- |
+| Does `statenest dashboard` show only the active profile? | Yes, unless you pass `--all-profiles`                             |
+| Can the dashboard show several profiles at once?         | Yes, read-only, with every row labelled                           |
+| Can `projects`, `recent`, `status` aggregate profiles?   | **No**, by design — one profile at a time                         |
+| Is sync strictly per profile?                            | Yes. `ProfileSync` operates on one profile directory              |
+| Can two profiles use different private repositories?     | Yes, and tested: each remote contains only its own profile's data |
 
 With one shared profile, none of this comes up: every command already covers
 everything, and `--all-profiles` is unnecessary.
@@ -442,7 +462,7 @@ What does work:
 2. **Sync it first**, from the machine it lives on, to the private repository
    you intend to share.
 3. **On the other machine, join that same profile**: `statenest profile use
-   <name>` (or `create` it first if the name does not exist there), then
+<name>` (or `create` it first if the name does not exist there), then
    `sync init` against the same repository, then `sync`.
 4. **Scan that machine's repositories** — `statenest scan ~/code --save-roots` —
    and sync again. Its checkouts attach to the projects that already exist.

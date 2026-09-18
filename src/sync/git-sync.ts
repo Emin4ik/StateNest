@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { git } from '../git/exec.js';
 import { normalizeRemoteUrl } from '../git/remote-url.js';
-import { pathExists } from '../util/fs-atomic.js';
+import { pathExists, writeFileAtomic } from '../util/fs-atomic.js';
 import { isPathInside } from '../util/paths.js';
 import { BrainError } from '../util/errors.js';
 import { auditProfile, describeBlock, hasBlockingFindings } from '../security/audit.js';
@@ -47,6 +47,16 @@ export interface SyncResult {
   blockers: string[];
   /** Paths that conflicted, when the outcome is `conflict`. */
   conflicts: string[];
+  /**
+   * The remote commit a conflict was against. Both sides survive a conflict:
+   * ours on the branch, theirs here.
+   */
+  conflictRemoteSha?: string;
+  /**
+   * True when a conflicting rebase was unwound, so the profile directory is
+   * back to a valid local state rather than holding conflict markers.
+   */
+  rolledBack?: boolean;
 }
 
 export interface SyncStatus {
@@ -59,6 +69,26 @@ export interface SyncStatus {
   behind: number | null;
   lastCommit: string | null;
 }
+
+/** One record that two machines changed, with both versions. */
+export interface ConflictSide {
+  /** Path relative to the profile directory. */
+  path: string;
+  /** This machine's version; null when this machine does not have the record. */
+  mine: string | null;
+  /** The other machine's version; null when it does not have the record. */
+  theirs: string | null;
+}
+
+export type ConflictChoice = 'mine' | 'theirs';
+
+/**
+ * How many conflicting passes a repair will work through.
+ *
+ * A rebase replays commits one at a time, so the same record can conflict on
+ * several of them. This bounds the work rather than trusting it to converge.
+ */
+const MAX_REPAIR_PASSES = 50;
 
 const COMMIT_TIMEOUT = 30_000;
 const NETWORK_TIMEOUT = 120_000;
@@ -299,14 +329,51 @@ export class ProfileSync {
         if (!rebase.ok) {
           const conflicted = await this.run(['diff', '--name-only', '--diff-filter=U']);
           conflicts.push(...conflicted.stdout.split('\n').filter(Boolean));
+
+          // Record where the other side is before unwinding. `origin/<branch>`
+          // is a moving ref; the sha is not, so a repair run days later still
+          // has exactly the commit this conflict was against.
+          const theirs = (
+            await this.run(['rev-parse', `origin/${status.branch}`])
+          ).stdout.trim();
+
+          // Leave the profile usable.
+          //
+          // A rebase stopped mid-flight leaves conflict markers in the working
+          // tree. For ordinary data that is merely untidy; profile.yaml is a
+          // control file, and a profile that cannot be parsed takes every
+          // command down with it - which is how a sync conflict used to look
+          // like "your profile does not exist".
+          //
+          // Aborting loses nothing. Our commits return to the branch exactly as
+          // they were, and theirs stay reachable at the sha recorded above.
+          // `statenest sync repair` resolves from those two.
+          const aborted = await this.run(['rebase', '--abort'], COMMIT_TIMEOUT);
+          if (!aborted.ok) {
+            // Refuse to claim a clean rollback that did not happen.
+            return {
+              ...empty,
+              outcome: 'conflict',
+              pulled: behind,
+              changed,
+              conflicts,
+              ...(theirs ? { conflictRemoteSha: theirs } : {}),
+              rolledBack: false,
+              message:
+                'Two machines changed the same record, and the rollback did not complete. Nothing was lost. Run `statenest sync repair`.',
+            };
+          }
+
           return {
             ...empty,
             outcome: 'conflict',
             pulled: behind,
             changed,
             conflicts,
+            ...(theirs ? { conflictRemoteSha: theirs } : {}),
+            rolledBack: true,
             message:
-              'Two machines changed the same record. Nothing was lost - resolve the files listed, then run `statenest sync` again.',
+              'Two machines changed the same record. Nothing was lost, and your local data is still usable. Run `statenest sync repair`.',
           };
         }
         pulled += behind;
@@ -359,6 +426,143 @@ export class ProfileSync {
           ? 'Already up to date.'
           : `Synced: ${changed} file(s) sent, ${pulled} commit(s) received.`,
     };
+  }
+
+  /**
+   * Both versions of each conflicted record, for the user to choose between.
+   *
+   * Reads out of git rather than the working tree, so it is safe to call at any
+   * time after the conflict - the working tree holds only our side.
+   */
+  async conflictSides(
+    remoteSha: string,
+    paths: string[],
+  ): Promise<ConflictSide[]> {
+    const sides: ConflictSide[] = [];
+    for (const path of paths) {
+      const mine = await this.run(['show', `HEAD:${path}`]);
+      const theirs = await this.run(['show', `${remoteSha}:${path}`]);
+      sides.push({
+        path,
+        // A missing side is meaningful: one machine added a record the other
+        // deleted. Null says so; an empty string would look like an empty file.
+        mine: mine.ok ? mine.stdout : null,
+        theirs: theirs.ok ? theirs.stdout : null,
+      });
+    }
+    return sides;
+  }
+
+  /**
+   * Finish a conflicted sync using one decision per record.
+   *
+   * The chosen content is written into the file directly rather than resolved
+   * with `--ours`/`--theirs`. Those two mean the opposite of what they read
+   * like during a rebase - `--ours` is the upstream being replayed onto, which
+   * is the *other* machine - and a resolution that silently picks the wrong
+   * side is the one failure this whole path exists to prevent.
+   */
+  async repair(
+    remoteSha: string,
+    choices: ReadonlyMap<string, ConflictChoice>,
+  ): Promise<SyncResult> {
+    const empty: SyncResult = {
+      outcome: 'local-only',
+      pulled: 0,
+      pushed: 0,
+      changed: 0,
+      message: '',
+      blockers: [],
+      conflicts: [],
+    };
+
+    const branch = await this.currentBranch();
+
+    // Our side, pinned before the rebase starts.
+    //
+    // This is the whole reason the sides are addressed by sha. Once a rebase is
+    // under way `HEAD` is the upstream being replayed onto - the *other*
+    // machine - so reading "mine" from HEAD mid-rebase silently returns theirs.
+    const mineSha = (await this.run(['rev-parse', 'HEAD'])).stdout.trim();
+    if (mineSha === '') {
+      return { ...empty, outcome: 'local-only', message: 'Nothing recorded on this machine yet.' };
+    }
+
+    const rebase = await this.run(['rebase', remoteSha], COMMIT_TIMEOUT);
+
+    // Bounded: each pass must resolve at least one path or we stop, so a
+    // repeatedly-conflicting rebase cannot spin.
+    let guard = 0;
+    let attempt = rebase;
+    while (!attempt.ok && guard < MAX_REPAIR_PASSES) {
+      guard += 1;
+      const conflicted = (await this.run(['diff', '--name-only', '--diff-filter=U'])).stdout
+        .split('\n')
+        .filter(Boolean);
+
+      if (conflicted.length === 0) break;
+
+      const undecided = conflicted.filter((path) => !choices.has(path));
+      if (undecided.length > 0) {
+        await this.run(['rebase', '--abort'], COMMIT_TIMEOUT);
+        return {
+          ...empty,
+          outcome: 'conflict',
+          conflicts: undecided,
+          rolledBack: true,
+          ...(remoteSha ? { conflictRemoteSha: remoteSha } : {}),
+          message: 'No decision was given for every conflicting record. Nothing was changed.',
+        };
+      }
+
+      for (const path of conflicted) {
+        const choice = choices.get(path);
+        const source = choice === 'theirs' ? remoteSha : mineSha;
+        const wanted = await this.run(['show', `${source}:${path}`]);
+
+        if (!wanted.ok) {
+          // The chosen side does not have this record: the decision is deletion.
+          await this.run(['rm', '--force', '--quiet', '--', path]);
+          continue;
+        }
+        await writeFileAtomic(join(this.cwd, path), wanted.stdout);
+        const staged = await this.run(['add', '--', path]);
+        if (!staged.ok) {
+          await this.run(['rebase', '--abort'], COMMIT_TIMEOUT);
+          return {
+            ...empty,
+            outcome: 'conflict',
+            conflicts: [path],
+            rolledBack: true,
+            message: `Could not apply the choice for ${path}. Nothing was changed.`,
+          };
+        }
+      }
+
+      attempt = await this.run(
+        ['-c', 'core.editor=true', 'rebase', '--continue'],
+        COMMIT_TIMEOUT,
+      );
+    }
+
+    if (!attempt.ok) {
+      await this.run(['rebase', '--abort'], COMMIT_TIMEOUT);
+      return {
+        ...empty,
+        outcome: 'conflict',
+        rolledBack: true,
+        message: 'The repair could not be completed. Your local data is unchanged.',
+      };
+    }
+
+    // Resolved. Hand back to the ordinary path so the credential scan, the
+    // push and the clean-tree invariant all apply exactly as they normally do.
+    return this.sync({ message: `Resolved a sync conflict on ${branch}` });
+  }
+
+  private async currentBranch(): Promise<string> {
+    const head = await this.run(['rev-parse', '--abbrev-ref', 'HEAD']);
+    return head.ok ? head.stdout.trim() : 'main';
   }
 
   /** True once this repository has at least one commit. */

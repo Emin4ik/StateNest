@@ -6,7 +6,7 @@ argument-hint: "[days]"
 
 # Recent activity
 
-1. Call `projectbrain_list_recent`. Pass `days` if the user named a period.
+1. Call `statenest_list_recent`. Pass `days` if the user named a period.
 2. Group the result the way the user thinks about time — today, yesterday,
    earlier this week — and give one line per project.
 3. If something is blocked or has an obvious next action, surface it.

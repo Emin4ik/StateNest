@@ -1,6 +1,6 @@
 # StateNest command reference
 
-Every command StateNest v0.1.2 implements. For the mental model and how the
+Every command StateNest implements. For the mental model and how the
 pieces fit together, read the [user guide](user-guide.md) first.
 
 Anything here can be checked with `statenest <command> --help`.
@@ -11,15 +11,15 @@ Anything here can be checked with `statenest <command> --help`.
 
 Valid on any command:
 
-| Option | What it does |
-| --- | --- |
-| `-v, --version` | Print the version |
-| `--home <dir>` | Use a different StateNest home instead of `~/.statenest` |
-| `--profile <name>` | Act on a specific profile for this one command |
-| `--json` | Machine-readable output. Every command supports it |
-| `-q, --quiet` | Suppress warnings |
-| `--no-color` | Disable coloured output |
-| `-h, --help` | Help for any command or subcommand |
+| Option             | What it does                                             |
+| ------------------ | -------------------------------------------------------- |
+| `-v, --version`    | Print the version                                        |
+| `--home <dir>`     | Use a different StateNest home instead of `~/.statenest` |
+| `--profile <name>` | Act on a specific profile for this one command           |
+| `--json`           | Machine-readable output. Every command supports it       |
+| `-q, --quiet`      | Suppress warnings                                        |
+| `--no-color`       | Disable coloured output                                  |
+| `-h, --help`       | Help for any command or subcommand                       |
 
 ```bash
 statenest --profile work projects
@@ -30,19 +30,29 @@ statenest projects --json | jq '.projects[].name'
 
 ## Setup and health
 
-### `statenest init`
+### `statenest setup` (also `statenest init`)
 
 Set up StateNest on this machine. Run once. Explains what it stores before
-writing anything, registers the machine, optionally scans for projects and
-optionally installs the Claude Code integration.
+writing anything, registers the machine, optionally scans for projects,
+optionally installs the Claude Code integration, and optionally connects sync to
+a private git repository you own.
 
-| Option | |
-| --- | --- |
-| `-y, --yes` | Accept every default, ask nothing |
-| `--machine-name <name>` | What to call this computer |
-| `--roots <dirs...>` | Directories that contain your projects |
-| `--no-scan` | Set up without scanning |
-| `--no-claude` | Skip the Claude Code integration offer |
+`setup` and `init` are the same command under two names — `setup` is what you
+want on a new machine, `init` is what older documentation and scripts call it.
+
+| Option                  |                                        |
+| ----------------------- | -------------------------------------- |
+| `-y, --yes`             | Accept every default, ask nothing      |
+| `--machine-name <name>` | What to call this computer             |
+| `--roots <dirs...>`     | Directories that contain your projects |
+| `--no-scan`             | Set up without scanning                |
+| `--no-claude`           | Skip the Claude Code integration offer |
+| `--no-sync`             | Skip the sync offer                    |
+
+**On a second machine**, this is all you need: give it the same private
+repository and it joins the existing profile, receives everything already there,
+and keeps its own machine-local settings. You do not have to sync before you
+scan, or know anything about how the histories meet.
 
 ### `statenest doctor`
 
@@ -51,8 +61,8 @@ StateNest version, git, data directory, permissions, profiles, schema version,
 project and checkpoint counts, missing local paths, file integrity, sync state
 and the Claude Code integration.
 
-| Option | |
-| --- | --- |
+| Option     |                                |
+| ---------- | ------------------------------ |
 | `--repair` | Attempt safe automatic repairs |
 
 **When:** first thing whenever something seems wrong.
@@ -65,28 +75,28 @@ and the Claude Code integration.
 
 What you have been working on, newest first, across every project.
 
-| Option | |
-| --- | --- |
+| Option            |                               |
+| ----------------- | ----------------------------- |
 | `-n, --limit <n>` | How many entries (default 15) |
-| `--days <n>` | Only the last N days |
-| `--all` | Include archived projects |
+| `--days <n>`      | Only the last N days          |
+| `--all`           | Include archived projects     |
 
-**When:** the Monday-morning question — *what was I doing?*
+**When:** the Monday-morning question — _what was I doing?_
 
 ### `statenest projects` (alias `ls`)
 
 List every project StateNest knows about.
 
-| Option | |
-| --- | --- |
-| `--active` / `--paused` / `--archived` | Filter by status |
-| `--stale [days]` | Untouched for this many days (default 30) |
-| `--dirty` | Only projects with uncommitted changes |
-| `--deployed` | Only projects with a registered deployment |
-| `--tag <tag>` | Only projects carrying this tag |
-| `--type <type>` | Only this ecosystem (`node`, `python`, `rust`, …) |
-| `--all` | Include archived (excluded by default) |
-| `--sort <field>` | `name`, `activity` or `status` (default `activity`) |
+| Option                                 |                                                     |
+| -------------------------------------- | --------------------------------------------------- |
+| `--active` / `--paused` / `--archived` | Filter by status                                    |
+| `--stale [days]`                       | Untouched for this many days (default 30)           |
+| `--dirty`                              | Only projects with uncommitted changes              |
+| `--deployed`                           | Only projects with a registered deployment          |
+| `--tag <tag>`                          | Only projects carrying this tag                     |
+| `--type <type>`                        | Only this ecosystem (`node`, `python`, `rust`, …)   |
+| `--all`                                | Include archived (excluded by default)              |
+| `--sort <field>`                       | `name`, `activity` or `status` (default `activity`) |
 
 Projects whose display names collide are qualified by repository path, so two
 unrelated `threads` are distinguishable.
@@ -97,11 +107,11 @@ Everything you need to pick a project back up: the last session's summary, open
 blockers, next actions, current branch and commit, uncommitted file count, and
 every other place the project exists.
 
-| Option | |
-| --- | --- |
-| `--full` | Include the full text of recent checkpoints |
-| `--checkpoints <n>` | How many checkpoints to read (default 5) |
-| `--no-refresh` | Skip re-reading live git state (faster) |
+| Option              |                                             |
+| ------------------- | ------------------------------------------- |
+| `--full`            | Include the full text of recent checkpoints |
+| `--checkpoints <n>` | How many checkpoints to read (default 5)    |
+| `--no-refresh`      | Skip re-reading live git state (faster)     |
 
 **When:** returning to anything after more than a day.
 
@@ -117,8 +127,8 @@ repository, deployments, tasks, decisions, blockers.
 Every place a project exists — machines, local paths, and its deployments with
 server, path, service and URL.
 
-| Option | |
-| --- | --- |
+| Option        |                                          |
+| ------------- | ---------------------------------------- |
 | `--path-only` | Print just the local path, for shell use |
 
 ```bash
@@ -129,8 +139,8 @@ cd "$(statenest where example --path-only)"
 
 An overview of everything at once: active, blocked, stale and uncommitted.
 
-| Option | |
-| --- | --- |
+| Option             |                                      |
+| ------------------ | ------------------------------------ |
 | `--stale-days <n>` | How old counts as stale (default 30) |
 
 ### `statenest search <query...>`
@@ -138,11 +148,11 @@ An overview of everything at once: active, blocked, stale and uncommitted.
 Search across projects, checkpoints, decisions, tasks and servers. Lexical — it
 finds words you actually wrote.
 
-| Option | |
-| --- | --- |
-| `-n, --limit <n>` | Maximum results (default 20) |
-| `--project <name>` | Restrict to one project |
-| `--scope <scope>` | `project`, `state`, `checkpoint`, `decision`, `task` or `remote` |
+| Option             |                                                                  |
+| ------------------ | ---------------------------------------------------------------- |
+| `-n, --limit <n>`  | Maximum results (default 20)                                     |
+| `--project <name>` | Restrict to one project                                          |
+| `--scope <scope>`  | `project`, `state`, `checkpoint`, `decision`, `task` or `remote` |
 
 ---
 
@@ -152,11 +162,11 @@ finds words you actually wrote.
 
 Register one directory as a project. Defaults to the current directory.
 
-| Option | |
-| --- | --- |
+| Option          |                                                          |
+| --------------- | -------------------------------------------------------- |
 | `--name <name>` | Display name (defaults to the repository or folder name) |
-| `--tag <tag>` | Tag it (repeatable) |
-| `--no-detect` | Skip reading manifests and README for a description |
+| `--tag <tag>`   | Tag it (repeatable)                                      |
+| `--no-detect`   | Skip reading manifests and README for a description      |
 
 ### `statenest scan [roots...]`
 
@@ -166,13 +176,13 @@ clone, a file in a linked worktree or submodule. See
 [how scan works](user-guide.md#how-scan-actually-works) — it does not read your
 source code, and it does not read Claude Code history.
 
-| Option | |
-| --- | --- |
-| `--depth <n>` | How deep to descend (default 8) |
-| `--dry-run` | Show what would be registered, change nothing |
-| `--include-non-git` | Also register project-looking directories without git |
-| `--nested` | Keep descending inside repositories to find nested ones |
-| `--save-roots` | Remember these directories as the profile's scan roots |
+| Option              |                                                         |
+| ------------------- | ------------------------------------------------------- |
+| `--depth <n>`       | How deep to descend (default 8)                         |
+| `--dry-run`         | Show what would be registered, change nothing           |
+| `--include-non-git` | Also register project-looking directories without git   |
+| `--nested`          | Keep descending inside repositories to find nested ones |
+| `--save-roots`      | Remember these directories as the profile's scan roots  |
 
 **Always try `--dry-run` first** on an unfamiliar tree.
 
@@ -180,10 +190,10 @@ source code, and it does not read Claude Code history.
 
 Forget a project. Its checkpoints are kept unless you say otherwise.
 
-| Option | |
-| --- | --- |
+| Option           |                                         |
+| ---------------- | --------------------------------------- |
 | `--with-history` | Also delete its checkpoints permanently |
-| `-y, --yes` | Do not ask for confirmation |
+| `-y, --yes`      | Do not ask for confirmation             |
 
 ---
 
@@ -193,15 +203,15 @@ Forget a project. Its checkpoints are kept unless you say otherwise.
 
 Record what you just accomplished. Defaults to the project you are standing in.
 
-| Option | |
-| --- | --- |
-| `-m, --message <text>` | One-line summary of what changed |
-| `--did <item>` | Something completed (repeatable) |
-| `--next <item>` | Something still to do (repeatable) |
-| `--blocked <item>` | Something blocking progress (repeatable) |
-| `--decided <item>` | A decision made (repeatable) |
-| `--tag <tag>` | Tag the checkpoint (repeatable) |
-| `--force` | Write even if nothing appears to have changed |
+| Option                 |                                               |
+| ---------------------- | --------------------------------------------- |
+| `-m, --message <text>` | One-line summary of what changed              |
+| `--did <item>`         | Something completed (repeatable)              |
+| `--next <item>`        | Something still to do (repeatable)            |
+| `--blocked <item>`     | Something blocking progress (repeatable)      |
+| `--decided <item>`     | A decision made (repeatable)                  |
+| `--tag <tag>`          | Tag the checkpoint (repeatable)               |
+| `--force`              | Write even if nothing appears to have changed |
 
 ```bash
 statenest checkpoint -m "Replaced the greedy allocator." \
@@ -341,16 +351,24 @@ everything works offline without it.
 
 ```bash
 statenest sync init git@github.com:you/statenest-data.git
-statenest sync            # pull, commit, push
-statenest sync status
+statenest sync            # send and receive now
+statenest sync status     # is everything up to date?
+statenest sync repair     # choose a side when two machines disagree
 ```
 
 `sync init` takes `--branch <branch>` (default `main`) and `-y, --yes`.
 `statenest sync` is shorthand for `statenest sync run`, which takes
-`-m, --message <text>` and `--no-push`.
+`-m, --message <text>` and `--no-push`. `sync status` takes `--verbose` to show
+the underlying git state. `sync repair` takes `-y, --yes` to keep this machine's
+version of everything.
+
+**You do not normally need any of these.** Once sync is connected it runs by
+itself after anything worth sharing. These are for when you want to look, or to
+send something immediately.
 
 Every sync scans for credentials first and refuses to push if it finds any.
-Conflicts are surfaced, never auto-merged.
+Conflicts are surfaced, never auto-merged: StateNest keeps both versions, leaves
+your local data usable, and `sync repair` asks which to keep.
 
 ---
 
@@ -362,13 +380,13 @@ statenest dashboard --open
 
 A local, read-only web view of your projects, machines and servers.
 
-| Option | |
-| --- | --- |
-| `-p, --port <port>` | Port to serve on |
-| `--host <host>` | Address to bind to (loopback only unless forced) |
-| `--yes-expose-me` | Allow binding to a non-loopback address |
-| `--open` | Open it in your browser |
-| `--all-profiles` | Show every profile in one **read-only** view, each row labelled with its profile |
+| Option              |                                                                                  |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `-p, --port <port>` | Port to serve on                                                                 |
+| `--host <host>`     | Address to bind to (loopback only unless forced)                                 |
+| `--yes-expose-me`   | Allow binding to a non-loopback address                                          |
+| `--open`            | Open it in your browser                                                          |
+| `--all-profiles`    | Show every profile in one **read-only** view, each row labelled with its profile |
 
 `--all-profiles` is a display-only join: profiles keep separate directories and
 separate sync remotes, nothing is copied between them, and the dashboard has no
@@ -387,11 +405,11 @@ statenest migrate               # bring stored records to the current schema
 statenest uninstall             # remove integrations; keeps your data
 ```
 
-| Command | Options |
-| --- | --- |
-| `export` | `--profile-only`, `--skip-audit` (not recommended) |
-| `import` | `--force`, `-y, --yes` |
-| `migrate` | `--dry-run`, `-y, --yes`, `--all-profiles` |
+| Command     | Options                                                  |
+| ----------- | -------------------------------------------------------- |
+| `export`    | `--profile-only`, `--skip-audit` (not recommended)       |
+| `import`    | `--force`, `-y, --yes`                                   |
+| `migrate`   | `--dry-run`, `-y, --yes`, `--all-profiles`               |
 | `uninstall` | `--integrations-only`, `--all` (asks first), `-y, --yes` |
 
 `export` excludes machine-local state, so a backup restores cleanly onto a

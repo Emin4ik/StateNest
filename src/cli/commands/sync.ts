@@ -6,7 +6,12 @@ import { writeDataRepoScaffolding } from '../../core/workspace.js';
 import { contractHome } from '../../util/paths.js';
 import { confirm, closePrompts } from '../prompt.js';
 import { BrainError } from '../../util/errors.js';
-import { readMachineLocalState, recordSyncCompleted } from '../../core/machine-local.js';
+import { relativeTime } from '../../util/time.js';
+import { readMachineLocalState } from '../../core/machine-local.js';
+import { recordOutcome, performAutoSync } from '../../sync/auto-sync.js';
+import { describeRecordPath, labelRecord } from '../../sync/record-label.js';
+import { Registry } from '../../core/registry.js';
+import { select } from '../prompt.js';
 
 export function syncCommand(): Command {
   const command = new Command('sync').description(
@@ -123,12 +128,10 @@ export function syncCommand(): Command {
         push: options.push,
       });
 
-      if (result.outcome === 'synced' || result.outcome === 'up-to-date') {
-        // Machine-local, outside the profile directory. Writing this into
-        // profile.yaml dirtied the repository the sync had just cleaned, and
-        // gave every machine a different value for the same synced field.
-        await recordSyncCompleted(workspace.paths, workspace.profile.name, workspace.profile);
-      }
+      // Machine-local, outside the profile directory. Writing any of this into
+      // profile.yaml dirtied the repository the sync had just cleaned, and gave
+      // every machine a different value for the same synced field.
+      await recordOutcome(workspace, result);
 
       if (wantsJson()) {
         printJson(result);
@@ -162,31 +165,28 @@ export function syncCommand(): Command {
           break;
 
         case 'conflict':
-          failure('Two machines changed the same record.');
+          failure('StateNest needs your attention.');
           print('');
-          for (const file of result.conflicts.slice(0, 10)) print(`    ${style.yellow(file)}`);
+          print('  Two machines changed the same thing:');
           print('');
-          print(style.dim('  Nothing was lost. Both versions are in the files above, in git.'));
-          print('');
-
-          // profile.yaml is a control file: while it holds conflict markers
-          // most commands stop working, and a user who does not know that may
-          // reach for something destructive. Say what not to do, once.
-          if (result.conflicts.some((file) => file.endsWith('profile.yaml'))) {
-            print(style.yellow('  Until this is resolved, most commands will say the profile'));
-            print(style.yellow('  cannot be read. That is this conflict, not lost data.'));
-            print(style.dim('  Do not create a replacement profile, and do not delete'));
-            print(style.dim(`  ${contractHome(workspace.paths.home)} — everything is still here.`));
-            print('');
+          for (const file of result.conflicts.slice(0, 10)) {
+            print(`    ${style.yellow(describeRecordPath(file))}`);
           }
-
-          print(style.dim('  Edit the files above to keep what you want, then:'));
-          print(bullet(style.cyan('git -C ' + contractHome(workspace.profilePaths.root) + ' add <file>')));
-          print(bullet(style.cyan('git -C ' + contractHome(workspace.profilePaths.root) + ' rebase --continue')));
-          print(bullet(style.cyan('statenest sync')));
+          if (result.conflicts.length > 10) {
+            print(style.dim(`    ... and ${result.conflicts.length - 10} more`));
+          }
           print('');
-          print(style.dim('  Or back out of this sync entirely and try again later:'));
-          print(bullet(style.cyan('git -C ' + contractHome(workspace.profilePaths.root) + ' rebase --abort')));
+          if (result.rolledBack) {
+            // The rebase was unwound, so this is true and worth saying plainly:
+            // the thing users fear here is that their data is stuck or gone.
+            print(`  ${style.green('Your local StateNest data is safe and still usable.')}`);
+            print(style.dim('  Both versions are kept. Nothing was merged or discarded.'));
+          } else {
+            print(style.dim('  Both versions are kept. Nothing was merged or discarded.'));
+          }
+          print('');
+          print(style.dim('  To choose, one record at a time:'));
+          print(bullet(style.cyan('statenest sync repair')));
           process.exitCode = 1;
           break;
 
@@ -207,18 +207,25 @@ export function syncCommand(): Command {
   command
     .command('status')
     .description('Show the sync state of this profile')
-    .action(async () => {
+    .option('--verbose', 'include the underlying git detail')
+    .action(async (options: { verbose?: boolean }) => {
       const { workspace } = await openContext();
       const sync = new ProfileSync(workspace.profilePaths, workspace.paths.home);
       const status = await sync.status();
+      const local = await readMachineLocalState(
+        workspace.paths,
+        workspace.profile.name,
+        workspace.profile,
+      );
 
       if (wantsJson()) {
         return printJson({
           profile: workspace.profile.name,
           configured: workspace.profile.sync.enabled,
-          last_sync_at: (
-            await readMachineLocalState(workspace.paths, workspace.profile.name, workspace.profile)
-          ).last_sync_at,
+          last_sync_at: local.last_sync_at,
+          auto_sync: local.auto_sync,
+          auto_push: local.auto_push,
+          health: local.sync_health,
           ...status,
         });
       }
@@ -226,22 +233,197 @@ export function syncCommand(): Command {
       print('');
       heading(`Sync — profile "${workspace.profile.name}"`);
       print('');
+
       if (!status.initialised) {
-        print(`  ${style.dim('not configured')} — everything stays on this machine`);
+        print(`  ${style.dim('not set up')} — everything stays on this machine`);
         print('');
-        print(bullet(style.cyan('statenest sync init <private-repo-url>')));
+        print(bullet(style.cyan('statenest setup')));
         print('');
         return;
       }
 
-      print(`  remote      ${status.remote ?? style.dim('none')}`);
-      print(`  branch      ${status.branch}`);
-      print(`  local       ${status.dirty ? style.yellow('uncommitted changes') : style.green('clean')}`);
-      if (status.ahead !== null) print(`  ahead       ${status.ahead}`);
-      if (status.behind !== null) print(`  behind      ${status.behind}`);
-      if (status.lastCommit) print(`  last commit ${style.dim(status.lastCommit)}`);
+      // The headline is a sentence about StateNest, not a git status line.
+      for (const line of healthLines(local.sync_health, local.last_sync_at, status.dirty)) {
+        print(`  ${line}`);
+      }
       print('');
+
+      if (local.sync_health.state === 'conflict' && local.sync_health.conflicts.length > 0) {
+        for (const file of local.sync_health.conflicts.slice(0, 5)) {
+          print(`    ${style.yellow(describeRecordPath(file))}`);
+        }
+        print('');
+        print(bullet(style.cyan('statenest sync repair')));
+        print('');
+      }
+
+      if (!local.auto_sync) {
+        print(style.dim('  Automatic sync is off on this machine.'));
+        print('');
+      }
+
+      if (options.verbose) {
+        // Git, on request. Normal use never needs this, but when something is
+        // genuinely strange the underlying state should not be hidden.
+        print(style.dim('  Underlying git state'));
+        print(`    remote      ${status.remote ?? style.dim('none')}`);
+        print(`    branch      ${status.branch}`);
+        print(`    worktree    ${status.dirty ? style.yellow('uncommitted changes') : style.green('clean')}`);
+        if (status.ahead !== null) print(`    ahead       ${status.ahead}`);
+        if (status.behind !== null) print(`    behind      ${status.behind}`);
+        if (status.lastCommit) print(`    last commit ${style.dim(status.lastCommit)}`);
+        print('');
+      }
+    });
+
+  command
+    .command('repair')
+    .description('Resolve a sync conflict, one record at a time')
+    .option('-y, --yes', 'keep this machine\'s version of everything')
+    .action(async (options: { yes?: boolean }) => {
+      try {
+        const { workspace } = await openContext();
+        const sync = new ProfileSync(workspace.profilePaths, workspace.paths.home);
+        const local = await readMachineLocalState(
+          workspace.paths,
+          workspace.profile.name,
+          workspace.profile,
+        );
+
+        const health = local.sync_health;
+        if (health.state !== 'conflict' || !health.conflict_remote_sha) {
+          print('');
+          success('Nothing to repair.');
+          print(style.dim('  No sync conflict is recorded on this machine.'));
+          print('');
+          return;
+        }
+
+        // Project names, so the questions are about work rather than paths.
+        const registry = new Registry(workspace.store);
+        const projects = await registry.all();
+        const nameOf = (id: string): string | null =>
+          projects.find((project) => project.id === id)?.name ?? null;
+
+        const sides = await sync.conflictSides(health.conflict_remote_sha, health.conflicts);
+        const choices = new Map<string, 'mine' | 'theirs'>();
+
+        print('');
+        heading('Sync conflict');
+        print('');
+        print(style.dim(`  ${sides.length} record(s) were changed on two machines.`));
+        print(style.dim('  Nothing is merged. You choose which version to keep.'));
+        print('');
+
+        for (const side of sides) {
+          const label = labelRecord(side.path, nameOf);
+          print('');
+          print(`  ${style.bold(label.title)}`);
+          print('');
+          print(`    This machine:`);
+          print(excerpt(side.mine));
+          print('');
+          print(`    The other machine:`);
+          print(excerpt(side.theirs));
+          print('');
+
+          if (options.yes) {
+            choices.set(side.path, 'mine');
+            continue;
+          }
+
+          const answer = await select(
+            `  Which version of "${label.title}" should StateNest keep?`,
+            [
+              { label: 'Keep this machine' },
+              { label: 'Keep the other machine' },
+            ],
+            { defaultIndex: 0 },
+          );
+          choices.set(side.path, answer === 1 ? 'theirs' : 'mine');
+        }
+
+        const result = await sync.repair(health.conflict_remote_sha, choices);
+        await recordOutcome(workspace, result);
+
+        print('');
+        if (result.outcome === 'synced' || result.outcome === 'up-to-date') {
+          success('Sync conflict resolved.');
+          print(style.dim('  Your choices are now on every machine that syncs this profile.'));
+        } else if (result.outcome === 'offline') {
+          success('Sync conflict resolved locally.');
+          print(style.dim('  StateNest will send it when the network is back.'));
+        } else {
+          failure(result.message);
+          process.exitCode = 1;
+        }
+        print('');
+      } finally {
+        closePrompts();
+      }
+    });
+
+  // The detached runner a hook or a write spawns. Hidden: it is StateNest
+  // talking to itself, and an option list is for the user.
+  command
+    .command('background', { hidden: true })
+    .description('Run a scheduled sync in the background')
+    .action(async () => {
+      await performAutoSync();
     });
 
   return command;
+}
+
+/**
+ * The one line that says how sync is doing, in StateNest's own terms.
+ *
+ * Deliberately never mentions rebase, HEAD or origin. A user who has to learn
+ * what a detached HEAD is in order to understand their own notes has been let
+ * down by the tool, not by git.
+ */
+function healthLines(
+  health: { state: string; detail: string | null; conflicts: string[] },
+  lastSyncAt: string | null,
+  dirty: boolean,
+): string[] {
+  const when = lastSyncAt ? style.dim(` (last synced ${relativeTime(lastSyncAt)})`) : '';
+
+  switch (health.state) {
+    case 'conflict':
+      return [
+        `${style.yellow('⚠')} ${health.conflicts.length} item(s) need your attention.`,
+        style.dim('  Your local StateNest data is still usable.'),
+      ];
+    case 'blocked-by-secrets':
+      return [
+        `${style.yellow('⚠')} Sync is paused: StateNest found data that may contain a credential.`,
+        style.dim('  Nothing was sent. Run: statenest privacy audit'),
+      ];
+    case 'offline':
+      return [
+        `${style.dim('○')} Offline — local memory is safe.`,
+        style.dim('  StateNest will try again later.'),
+      ];
+    case 'pending':
+      return [`${style.dim('○')} Saved on this machine, waiting to sync.${when}`];
+    default:
+      return dirty
+        ? [`${style.dim('○')} Local updates waiting to sync.${when}`]
+        : [`${style.green('✓')} StateNest is up to date.${when}`];
+  }
+}
+
+/** A few lines of one side of a conflict, enough to choose by. */
+function excerpt(content: string | null): string {
+  if (content === null) return style.dim('      (this machine does not have this record)');
+  const lines = content
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .filter((line) => line !== '');
+  if (lines.length === 0) return style.dim('      (empty)');
+
+  const shown = lines.slice(0, 6).map((line) => `      ${line.slice(0, 100)}`);
+  if (lines.length > 6) shown.push(style.dim(`      ... ${lines.length - 6} more line(s)`));
+  return shown.join('\n');
 }

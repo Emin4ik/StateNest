@@ -5,8 +5,8 @@ description: Overview of everything — what is active, what is blocked, what ha
 
 # Where things stand
 
-1. Call `projectbrain_list_projects` for the overall picture, and
-   `projectbrain_list_recent` for what has moved lately.
+1. Call `statenest_list_projects` for the overall picture, and
+   `statenest_list_recent` for what has moved lately.
 2. Lead with anything that needs attention: blocked projects first, then
    anything left with uncommitted work.
 3. Finish with a short, concrete suggestion of what to pick up — based on what

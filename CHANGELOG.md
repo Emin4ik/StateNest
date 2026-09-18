@@ -8,6 +8,80 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Until 1.0.0, the on-disk data format may change between minor versions.
 Migrations are provided and are never destructive: see `docs/data-model.md`.
 
+## [Unreleased]
+
+StateNest stops needing to be operated. Installing it and opening Claude Code in
+a git repository is now the whole workflow: an ordinary day requires no
+StateNest command at all. The CLI is unchanged in what it can do — it is simply
+no longer on the critical path.
+
+### Added
+
+- **Automatic project recognition.** Opening Claude Code in a git repository
+  with a remote registers it, with the same name, type and description logic as
+  `statenest add`. A clone of a project you already have is linked as another
+  location of the same project, not a second one. Deliberately narrow: a
+  repository with no remote is not registered (its id would be random and could
+  never merge across machines), a directory that is not a repository is not
+  registered, and nothing outside the repository Claude was opened in is ever
+  examined.
+- **Automatic sync.** A checkpoint, decision or next action schedules a sync in
+  the background. Writes coalesce, so a burst costs one push rather than five;
+  exactly one sync runs per profile at a time; nothing ever waits for the
+  network; and a failure records a health state instead of interrupting anyone.
+- **Bounded freshness at session start.** A stale profile gets a few hundred
+  milliseconds to catch up before the brief is built, and the session starts
+  regardless. A remote recently found unreachable is not re-probed, so being
+  offline does not tax every session.
+- **`statenest setup`** — one-time onboarding: machine, Claude Code integration
+  and sync in one pass. The same command as `statenest init`, under the name
+  people look for. On a second machine it joins the existing profile and
+  receives what is already there, with no ordering to understand.
+- **`statenest sync repair`** — resolve a conflict in StateNest's own terms.
+  Shows both versions of each record, named as work rather than as file paths,
+  and asks which to keep.
+- **A sync health model**, surfaced by `statenest sync status` and
+  `statenest doctor`: up to date, offline, waiting, needs attention, or paused
+  because something looked like a credential.
+
+### Changed
+
+- **A sync conflict no longer leaves the profile unreadable.** The attempted
+  rebase is unwound, so ordinary commands keep working while the disagreement is
+  outstanding. Both versions are preserved — yours on the branch, theirs at the
+  recorded commit — and neither is ever chosen for you.
+- **Normal output speaks StateNest, not git.** No rebase, HEAD or
+  `origin/main...HEAD` in ordinary use. `statenest sync status --verbose` still
+  shows the underlying git state, and raw git remains available for emergencies.
+- **MCP tools are named `statenest_*`** rather than `projectbrain_*`, which was
+  left over from the pre-release name. Skills and documentation were updated with
+  them.
+- **`sync.auto_push` and `sync.auto_pull` are now machine-local and real.** They
+  were in the shared profile and read by nothing. Whether to push automatically
+  is a per-machine decision — a laptop on a metered connection and a desktop on
+  home broadband can disagree — so they live alongside the other machine-local
+  state, where the v0.1.2 fix put it. `auto_pull` is retired rather than
+  reimplemented: StateNest never force pushes, so sending requires rebasing onto
+  the remote first, and "pull" was never separable from "sync at all". An
+  existing `auto_pull: false` is honoured once, as `auto_sync: false`.
+- **A new location is recorded reliably** at session start rather than
+  best-effort, so the same repository at a second path is always remembered.
+
+### Fixed
+
+- Two sleeps used `unref`'d timers, which let the process exit before they
+  fired. The debounce and the session-start refresh would both have been silent
+  no-ops in a real hook process.
+
+### Unchanged
+
+- No account, no service, no cloud. The sync remote is still an ordinary private
+  git repository you create and own.
+- Raw transcripts are still never stored, source code is still never stored, and
+  the credential scan still runs before anything leaves the machine.
+- StateNest still never spawns a model, and still never writes to your source
+  repositories.
+
 ## [0.1.2] — 2026-09-18
 
 A correctness patch for multi-machine sync. The sync architecture is unchanged
@@ -18,17 +92,17 @@ own control file.
 ### Fixed
 
 - **A successful sync no longer leaves the profile repository dirty.** `sync`
-  wrote `sync.last_sync_at` into `profile.yaml` *after* the git sync had already
+  wrote `sync.last_sync_at` into `profile.yaml` _after_ the git sync had already
   committed and pushed — inside the directory it had just cleaned. Every
   successful sync therefore ended modified, and `sync status` immediately
   afterwards reported local uncommitted changes with nothing ahead or behind.
-- **`last_sync_at` is now machine-local.** It records when *this* computer last
+- **`last_sync_at` is now machine-local.** It records when _this_ computer last
   synced, so two computers sharing a profile each wrote a different value into
   the same shared line. The second machine to sync hit a `profile.yaml`
   conflict even when no project data disagreed. Because `profile.yaml` is a
   control file, the conflict markers then made the profile unreadable, and
   `projects` answered with the contradictory `No profile named "personal".
-  Available profiles: personal`.
+Available profiles: personal`.
 - **`project_roots` is now machine-local.** The directories a machine scans are
   machine-specific — `~/Documents` on a Mac, `D:\work` on Windows — but were
   stored in the shared profile, so whichever machine synced last silently
@@ -119,7 +193,7 @@ and preparing StateNest for a second computer.
   deployment record, with StateNest **not** installed on it. A full install is
   for hosts you genuinely work on.
 - Corrected the discovery wording: a repository is recognised by a `.git`
-  *marker*, which is a directory in an ordinary clone and a file in a linked
+  _marker_, which is a directory in an ordinary clone and a file in a linked
   worktree or submodule. The implementation has always accepted both.
 
 ### Validation
@@ -196,7 +270,7 @@ needed.
   are written. A credential that reached a file before a detection pattern
   existed can no longer flow out of it into a model's context, the dashboard or
   search results. Redaction on read does not rewrite the file; `statenest privacy
-  audit` still reports it
+audit` still reports it
 - Archive extraction validates every member before unpacking, rejecting
   absolute paths, drive letters, UNC paths, `..` traversal and symlink members,
   so a crafted backup cannot write outside the target directory

@@ -10,8 +10,8 @@ Load everything needed to continue work on a project, then summarise it for the 
 
 ## Steps
 
-1. Call `projectbrain_get_resume_context` with the project name the user gave.
-   - If they gave no name, call `projectbrain_current_project` first to see which
+1. Call `statenest_get_resume_context` with the project name the user gave.
+   - If they gave no name, call `statenest_current_project` first to see which
      project this directory belongs to.
    - Partial names work: "world" resolves "world-war-rts". If the tool reports
      the name is ambiguous, show the user the candidates and ask which they meant.

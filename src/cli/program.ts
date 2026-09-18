@@ -2,7 +2,7 @@ import { Command, Option } from 'commander';
 import { setGlobalOptions } from './context.js';
 import { printError, style } from './output.js';
 import { closePrompts } from './prompt.js';
-import { initCommand } from './commands/init.js';
+import { initCommand, setupCommand } from './commands/init.js';
 import { scanCommand } from './commands/scan.js';
 import { projectsCommand } from './commands/projects.js';
 import { showCommand } from './commands/show.js';
@@ -71,6 +71,7 @@ export function buildProgram(version: string): Command {
     });
 
   // Getting started
+  program.addCommand(setupCommand());
   program.addCommand(initCommand());
   program.addCommand(doctorCommand());
 

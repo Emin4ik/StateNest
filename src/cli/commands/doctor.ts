@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { relativeTime } from '../../util/time.js';
 import { join } from 'node:path';
 import { access, constants } from 'node:fs/promises';
 import { getGlobalOptions, wantsJson } from '../context.js';
@@ -192,8 +193,65 @@ export function doctorCommand(): Command {
               ? `enabled → ${workspace.profile.sync.remote ?? 'no remote set'}`
               : 'enabled in config but the profile is not a git repository'
             : 'disabled (everything stays on this machine)',
-          ...(syncEnabled && !hasGitDir ? { fix: 'statenest sync init' } : {}),
+          ...(syncEnabled && !hasGitDir ? { fix: 'statenest setup' } : {}),
         });
+
+        // -- Sync health ------------------------------------------------------
+        //
+        // Sync is automatic now, so its failures are things the user did not
+        // watch happen. This is where they surface: once, in a place they
+        // already run when something feels wrong, rather than as a warning
+        // printed on top of every command.
+        if (syncEnabled && hasGitDir) {
+          const { readMachineLocalState } = await import('../../core/machine-local.js');
+          const local = await readMachineLocalState(
+            workspace.paths,
+            workspace.profile.name,
+            workspace.profile,
+          );
+          const health = local.sync_health;
+
+          const states: Record<string, { level: Check['level']; detail: string; fix?: string }> = {
+            ok: {
+              level: 'ok',
+              detail: local.last_sync_at
+                ? `up to date (last synced ${relativeTime(local.last_sync_at)})`
+                : 'up to date',
+            },
+            offline: {
+              level: 'ok',
+              detail: 'offline — local memory is safe; StateNest will try again later',
+            },
+            pending: { level: 'ok', detail: 'local updates waiting to sync' },
+            conflict: {
+              level: 'warn',
+              detail: `${health.conflicts.length} item(s) need your attention; local data is still usable`,
+              fix: 'statenest sync repair',
+            },
+            'blocked-by-secrets': {
+              level: 'warn',
+              detail: 'paused: StateNest found data that may contain a credential. Nothing was sent.',
+              fix: 'statenest privacy audit',
+            },
+            error: { level: 'warn', detail: health.detail ?? 'sync reported a problem' },
+          };
+
+          const entry = states[health.state] ?? states['ok']!;
+          checks.push({
+            name: 'Sync health',
+            level: entry.level,
+            detail: entry.detail,
+            ...(entry.fix ? { fix: entry.fix } : {}),
+          });
+
+          if (!local.auto_sync) {
+            checks.push({
+              name: 'Automatic sync',
+              level: 'ok',
+              detail: 'off on this machine (run statenest sync to send and receive)',
+            });
+          }
+        }
       }
 
       // -- Claude Code -------------------------------------------------------

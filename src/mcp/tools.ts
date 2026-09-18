@@ -16,7 +16,7 @@ import { isBrainError } from '../util/errors.js';
 /**
  * MCP tool definitions.
  *
- * Naming follows `projectbrain_<verb>_<thing>` so the tools group together in
+ * Naming follows `statenest_<verb>_<thing>` so the tools group together in
  * a host's tool list. Schemas are kept deliberately small: every field costs
  * context in every request, and an agent that needs a rarely-used option can
  * be told about it in the description instead.
@@ -42,6 +42,23 @@ function failure(message: string): TextResult {
 async function open(): Promise<{ workspace: Workspace; registry: Registry }> {
   const workspace = await Workspace.open();
   return { workspace, registry: new Registry(workspace.store) };
+}
+
+/**
+ * Ask for a background sync after a write, and never wait for it.
+ *
+ * These tools are how Claude records work as it happens, so they are exactly
+ * the writes another machine wants. The sync is detached and every failure is
+ * swallowed: an agent's tool call must not turn into a network error because
+ * StateNest wanted to push.
+ */
+async function scheduleSync(workspace: Workspace): Promise<void> {
+  try {
+    const { scheduleAutoSync, selfRunner } = await import('../sync/auto-sync.js');
+    await scheduleAutoSync(workspace, selfRunner(['sync', 'background']));
+  } catch {
+    // Ignored on purpose.
+  }
 }
 
 /**
@@ -75,7 +92,7 @@ export function registerTools(server: McpServer): void {
   // -------------------------------------------------------------------------
 
   server.registerTool(
-    'projectbrain_current_project',
+    'statenest_current_project',
     {
       title: 'Identify the current project',
       description:
@@ -117,7 +134,7 @@ export function registerTools(server: McpServer): void {
   );
 
   server.registerTool(
-    'projectbrain_list_projects',
+    'statenest_list_projects',
     {
       title: 'List projects',
       description:
@@ -184,7 +201,7 @@ export function registerTools(server: McpServer): void {
   );
 
   server.registerTool(
-    'projectbrain_get_resume_context',
+    'statenest_get_resume_context',
     {
       title: 'Get resume context for a project',
       description:
@@ -257,7 +274,7 @@ export function registerTools(server: McpServer): void {
   );
 
   server.registerTool(
-    'projectbrain_list_recent',
+    'statenest_list_recent',
     {
       title: 'Recent activity across projects',
       description:
@@ -297,7 +314,7 @@ export function registerTools(server: McpServer): void {
   );
 
   server.registerTool(
-    'projectbrain_where',
+    'statenest_where',
     {
       title: 'Where a project lives',
       description:
@@ -352,7 +369,7 @@ export function registerTools(server: McpServer): void {
   );
 
   server.registerTool(
-    'projectbrain_search',
+    'statenest_search',
     {
       title: 'Search project memory',
       description:
@@ -397,7 +414,7 @@ export function registerTools(server: McpServer): void {
   // -------------------------------------------------------------------------
 
   server.registerTool(
-    'projectbrain_checkpoint',
+    'statenest_checkpoint',
     {
       title: 'Record a checkpoint',
       description:
@@ -452,6 +469,8 @@ export function registerTools(server: McpServer): void {
         last_activity_at: now(),
       });
 
+      await scheduleSync(workspace);
+
       return text(
         `Checkpoint saved for ${project.name}.` +
           (result.redactions > 0
@@ -462,7 +481,7 @@ export function registerTools(server: McpServer): void {
   );
 
   server.registerTool(
-    'projectbrain_add_decision',
+    'statenest_add_decision',
     {
       title: 'Record a decision',
       description:
@@ -501,12 +520,13 @@ export function registerTools(server: McpServer): void {
       });
 
       await workspace.store.appendDecision(decision);
+      await scheduleSync(workspace);
       return text(`Decision recorded for ${project.name}: ${decision.title}`);
     }),
   );
 
   server.registerTool(
-    'projectbrain_add_task',
+    'statenest_add_task',
     {
       title: 'Record a next action',
       description:
@@ -545,12 +565,13 @@ export function registerTools(server: McpServer): void {
       });
 
       await workspace.store.writeTasks({ ...file, tasks: [...file.tasks, task] });
+      await scheduleSync(workspace);
       return text(`Next action recorded for ${project.name}: ${task.text}`);
     }),
   );
 
   server.registerTool(
-    'projectbrain_update_state',
+    'statenest_update_state',
     {
       title: 'Update what a project is currently about',
       description:
@@ -589,6 +610,8 @@ export function registerTools(server: McpServer): void {
         ...(input.status !== undefined ? { status: input.status } : {}),
         last_activity_at: now(),
       });
+
+      await scheduleSync(workspace);
 
       return text(
         `Updated ${saved.name}.` +

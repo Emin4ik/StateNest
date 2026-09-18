@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { openContext, wantsJson } from '../context.js';
+import { openContext, wantsJson , scheduleSyncAfterWrite } from '../context.js';
 import { print, printJson, style, success } from '../output.js';
 import { identifyHere } from './checkpoint.js';
 import { TaskSchema, type Task, type TaskStatus } from '../../core/schema.js';
@@ -44,6 +44,7 @@ export function taskCommand(): Command {
       await workspace.store.writeTasks({ ...file, tasks: [...file.tasks, task] });
 
       if (wantsJson()) return printJson(task);
+      await scheduleSyncAfterWrite(workspace);
       success(`Added to ${style.bold(project.name)}: ${task.text}`);
     });
 

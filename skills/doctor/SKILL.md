@@ -9,7 +9,7 @@ description: Diagnose StateNest itself when it seems not to be working — no co
    Every failing check prints the exact command that fixes it.
 
 2. If the user's current project is not being recognised, call
-   `projectbrain_current_project` and check what it reports:
+   `statenest_current_project` and check what it reports:
    - "No registered project" with a git repository present → they need `statenest add .`
    - No git repository → confirm which directory they expect to be the project
 

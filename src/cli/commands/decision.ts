@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { openContext, wantsJson } from '../context.js';
+import { openContext, wantsJson , scheduleSyncAfterWrite } from '../context.js';
 import { print, printJson, style, success } from '../output.js';
 import { identifyHere } from './checkpoint.js';
 import { DecisionSchema } from '../../core/schema.js';
@@ -59,6 +59,7 @@ export function decisionCommand(): Command {
         await workspace.store.appendDecision(decision);
 
         if (wantsJson()) return printJson(decision);
+        await scheduleSyncAfterWrite(workspace);
         success(`Recorded for ${style.bold(project.name)}: ${decision.title}`);
       } finally {
         closePrompts();

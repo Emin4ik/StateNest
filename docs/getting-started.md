@@ -8,27 +8,47 @@
 
 ```bash
 npm install -g statenest
-statenest init
+statenest setup
 ```
 
 Node.js 22.12 or newer. Git is optional but strongly recommended: without it,
 StateNest cannot read branches, commits or uncommitted changes.
 
-`statenest init` shows you what it stores **before it writes anything**, asks which
-directories hold your projects, and scans them.
+`statenest setup` shows you what it stores **before it writes anything**, asks
+which directories hold your projects, installs the Claude Code integration, and
+offers to connect a private git repository so your other computers share the
+same memory.
 
 ```
-✓ StateNest initialised
 ✓ Machine registered: emin-macbook (macos)
-✓ 37 projects discovered
-✓ 12 active in the last 30 days
+✓ Claude Code integration installed
+✓ Sync connected
+✓ Ready
+
+  Open Claude Code inside a git project.
+  StateNest will take it from here.
 ```
 
 Non-interactive (CI, scripts, dotfiles):
 
 ```bash
-statenest init --yes --roots ~/Projects ~/Work --no-claude
+statenest setup --yes --roots ~/Projects ~/Work --no-claude --no-sync
 ```
+
+## Then just work
+
+```bash
+cd ~/Projects/world-war
+claude
+```
+
+That is the intended everyday use, and it needs no StateNest commands at all.
+Opening Claude Code inside a git repository is enough: StateNest recognises the
+repository (registering it if it is new and has a remote), puts your previous
+context into the session, records what the session achieved, and syncs it to
+your other machines in the background.
+
+The commands below are for looking at what it knows, not for making it work.
 
 ## Your first five minutes
 
@@ -93,10 +113,14 @@ On the second machine:
 
 ```bash
 npm install -g statenest
-statenest init
+statenest setup
 ```
 
-To carry your notes across too, sync both to a private repository you own.
+Give it the same private repository and it joins the existing profile,
+receives everything already there, and is ready. You do not need to sync before
+you scan, or know anything about how the two histories meet.
+
+To set sync up by hand instead, or to add it to machines that already exist:
 **Use the same profile name on both machines** — `personal` is the default, so
 usually there is nothing to change:
 

@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { openContext, wantsJson } from '../context.js';
+import { openContext, wantsJson , scheduleSyncAfterWrite } from '../context.js';
 import { bullet, print, printJson, style, success } from '../output.js';
 import { createCheckpoint, isCheckpointWorthwhile } from '../../checkpoints/create.js';
 import { readRepoFull } from '../../git/repo.js';
@@ -89,6 +89,8 @@ export function checkpointCommand(): Command {
         });
         return;
       }
+
+      await scheduleSyncAfterWrite(workspace);
 
       success(`Checkpoint saved for ${style.bold(project.name)}`);
       print(`  ${style.dim(contractHome(result.filePath))}`);

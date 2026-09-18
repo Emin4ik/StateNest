@@ -494,15 +494,28 @@ describe('multi-machine', () => {
         expect(result.conflicts.length).toBeGreaterThan(0);
         expect(result.message).toContain('Nothing was lost');
 
-        // Both versions are still on disk, in the conflicted file, for the
-        // user to resolve. Neither side was silently chosen.
+        // The conflict is surfaced, never resolved for you - but the profile
+        // is left in a state StateNest can still read. A half-finished rebase
+        // used to leave conflict markers in the live files, which for a control
+        // file like profile.yaml took every command down with it.
+        expect(result.rolledBack).toBe(true);
         const conflicted = await readFile(
           join(b.workspace.profilePaths.root, result.conflicts[0]!),
           'utf8',
         );
-        expect(conflicted).toContain('A says do this');
+        expect(conflicted).not.toContain('<<<<<<<');
         expect(conflicted).toContain('B says do that');
-        expect(conflicted).toContain('<<<<<<<');
+
+        // This machine's own data reads back normally, which is the whole
+        // point of unwinding.
+        const tasks = await b.workspace.store.readTasks(alpha.id);
+        expect(tasks.tasks[0]?.text).toBe('B says do that');
+
+        // And the other side is not lost: it is exactly where the result says.
+        expect(result.conflictRemoteSha).toBeTruthy();
+        const sides = await b.sync.conflictSides(result.conflictRemoteSha!, result.conflicts);
+        expect(sides[0]?.mine).toContain('B says do that');
+        expect(sides[0]?.theirs).toContain('A says do this');
       },
       GIT_TEST_TIMEOUT,
     );

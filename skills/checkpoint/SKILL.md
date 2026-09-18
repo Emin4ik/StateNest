@@ -10,7 +10,7 @@ Write down what this session accomplished, for whoever reads it months from now.
 
 ## Steps
 
-1. Call `projectbrain_checkpoint` with:
+1. Call `statenest_checkpoint` with:
    - `summary` — one or two sentences: what changed and why it mattered
    - `completed` — what was actually finished
    - `decisions` — choices made that a diff would not reveal
