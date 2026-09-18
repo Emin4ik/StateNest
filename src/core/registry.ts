@@ -11,7 +11,7 @@ import { now, type Timestamp } from '../util/time.js';
 import { pathKey, resolveRealPath } from '../util/paths.js';
 import { findRepoRoot, readRepoFast, type FastRepoInfo } from '../git/repo.js';
 import { detectProjectMetadata, suggestProjectName } from '../discovery/detect.js';
-import { resolveProject, type Resolution } from './resolve.js';
+import { projectQualifier, resolveProject, type Resolution } from './resolve.js';
 import { BrainError } from '../util/errors.js';
 import { normalizeRemoteUrl } from '../git/remote-url.js';
 
@@ -185,11 +185,26 @@ export class Registry {
     if (resolution.status === 'found') return resolution.project;
 
     if (resolution.status === 'ambiguous') {
+      // Qualify every candidate. When the names are identical - two unrelated
+      // repositories both called `threads` - a bare list of names tells the
+      // user nothing and "use a more specific name" is impossible advice.
+      const candidates = resolution.matches.slice(0, 8);
+      const identical = new Set(candidates.map((match) => match.project.name.toLowerCase())).size === 1;
+
       throw new BrainError('AMBIGUOUS_PROJECT', `"${term}" matches more than one project.`, {
-        details: resolution.matches
-          .slice(0, 8)
-          .map((match, index) => `${index + 1}. ${match.project.name}`),
-        hints: ['Use a longer or more specific name.'],
+        details: candidates.map(
+          (match, index) =>
+            `${index + 1}. ${match.project.name}  ${projectQualifier(match.project)}`,
+        ),
+        hints: identical
+          ? [
+              // Terms, not a command line: this code does not know which
+              // subcommand the user ran. Both forms resolve - a repository path
+              // is a `repository` match, and an id is an `id` match.
+              'These names are identical. Use one of these instead of the name:',
+              ...candidates.slice(0, 4).map((match) => `  ${projectQualifier(match.project)}`),
+            ]
+          : ['Use a longer or more specific name.'],
       });
     }
 
@@ -448,6 +463,19 @@ function buildLocation(
  * Two worktrees of one repository are two locations on the same machine, which
  * is why the key is the pair and not the machine alone.
  */
+/**
+ * Does this project exist on a computer other than this one?
+ *
+ * `location-added` means only that a path was recorded which was not recorded
+ * before. That happens when the same repository is cloned twice on one machine
+ * just as readily as when it turns up on a second computer, so the outcome
+ * alone cannot justify saying "another machine" - and saying it wrongly
+ * invents a second computer the user does not have.
+ */
+export function hasLocationOnAnotherMachine(project: Project, machineId: string): boolean {
+  return project.local_locations.some((location) => location.machine_id !== machineId);
+}
+
 export function upsertLocation(project: Project, location: ProjectLocation): Project {
   const key = pathKey(location.path);
   const locations = [...project.local_locations];

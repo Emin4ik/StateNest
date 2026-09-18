@@ -5,6 +5,7 @@ import { contractHome, resolveUserPath } from '../../util/paths.js';
 import { pathExists } from '../../util/fs-atomic.js';
 import { BrainError } from '../../util/errors.js';
 import { closePrompts, confirm } from '../prompt.js';
+import { hasLocationOnAnotherMachine } from '../../core/registry.js';
 
 export function addCommand(): Command {
   return new Command('add')
@@ -41,8 +42,12 @@ export function addCommand(): Command {
           success(`Registered ${style.bold(project.name)}`);
           break;
         case 'location-added':
+          // Only claim another machine when one is actually recorded. The same
+          // repository cloned twice here produces this outcome as well.
           success(
-            `${style.bold(project.name)} was already known from another machine — linked this copy`,
+            hasLocationOnAnotherMachine(project, workspace.machineId)
+              ? `${style.bold(project.name)} was already known from another machine — linked this copy`
+              : `${style.bold(project.name)} was already registered — linked this copy too`,
           );
           break;
         default:

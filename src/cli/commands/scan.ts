@@ -7,6 +7,7 @@ import { scanForProjects, type Candidate } from '../../discovery/scanner.js';
 import { pathExists } from '../../util/fs-atomic.js';
 import { contractHome, resolveUserPath } from '../../util/paths.js';
 import type { Registry } from '../../core/registry.js';
+import { hasLocationOnAnotherMachine } from '../../core/registry.js';
 import type { Workspace } from '../../core/workspace.js';
 
 export function scanCommand(): Command {
@@ -54,6 +55,7 @@ interface ScanOptions {
 interface ScanReport {
   created: string[];
   locationsAdded: string[];
+  linkedFromOtherMachine: string[];
   alreadyKnown: number;
   skipped: number;
   durationMs: number;
@@ -90,6 +92,7 @@ async function runScan(
 
   const created: string[] = [];
   const locationsAdded: string[] = [];
+  const linkedFromOtherMachine: string[] = [];
   let alreadyKnown = 0;
 
   if (!options.dryRun) {
@@ -99,8 +102,15 @@ async function runScan(
     for (const candidate of scan.candidates) {
       const result = await registry.register(candidate.path, { machineId: workspace.machineId });
       if (result.outcome === 'created') created.push(result.project.name);
-      else if (result.outcome === 'location-added') locationsAdded.push(result.project.name);
-      else alreadyKnown++;
+      else if (result.outcome === 'location-added') {
+        // Distinguish a second copy on this computer from a project that really
+        // does live on another one. Both produce `location-added`.
+        if (hasLocationOnAnotherMachine(result.project, workspace.machineId)) {
+          linkedFromOtherMachine.push(result.project.name);
+        } else {
+          locationsAdded.push(result.project.name);
+        }
+      } else alreadyKnown++;
     }
   }
 
@@ -113,6 +123,7 @@ async function runScan(
   return {
     created,
     locationsAdded,
+    linkedFromOtherMachine,
     alreadyKnown,
     skipped: scan.stats.directoriesPruned,
     durationMs: scan.stats.durationMs,
@@ -125,7 +136,9 @@ async function runScan(
       dry_run: Boolean(options.dryRun),
       found: scan.candidates.length,
       created: created.length,
-      locations_added: locationsAdded.length,
+      locations_added: locationsAdded.length + linkedFromOtherMachine.length,
+      locations_added_this_machine: locationsAdded.length,
+      locations_linked_from_other_machine: linkedFromOtherMachine.length,
       already_known: alreadyKnown,
       duration_ms: scan.stats.durationMs,
       directories_visited: scan.stats.directoriesVisited,
@@ -170,7 +183,14 @@ function renderHumanReport(report: ScanReport, targets: string[], options: ScanO
     lines.push(`${pluralize(report.created.length, 'new project')} registered`);
   }
   if (report.locationsAdded.length > 0) {
-    lines.push(`${report.locationsAdded.length} already known from another machine, now linked here`);
+    lines.push(
+      `${pluralize(report.locationsAdded.length, 'extra copy', 'extra copies')} of a known project linked`,
+    );
+  }
+  if (report.linkedFromOtherMachine.length > 0) {
+    lines.push(
+      `${report.linkedFromOtherMachine.length} already known from another machine, now linked here`,
+    );
   }
   if (report.alreadyKnown > 0) lines.push(`${report.alreadyKnown} already up to date`);
 

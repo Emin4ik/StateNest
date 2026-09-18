@@ -14,6 +14,7 @@ import { contractHome, resolveUserPath } from '../../util/paths.js';
 import { pathExists } from '../../util/fs-atomic.js';
 import { effectiveActivity } from './projects.js';
 import { installClaudeIntegration, describeClaudeInstall } from '../../integrations/claude/install.js';
+import { hasLocationOnAnotherMachine } from '../../core/registry.js';
 
 export function initCommand(): Command {
   return new Command('init')
@@ -100,6 +101,7 @@ async function runInit(options: InitOptions): Promise<void> {
   const registry = new Registry(workspace.store);
   let registered = 0;
   let linked = 0;
+  let extraCopies = 0;
 
   if (chosenRoots.length > 0) {
     if (!wantsJson()) process.stderr.write(style.dim('\nScanning...'));
@@ -111,7 +113,10 @@ async function runInit(options: InitOptions): Promise<void> {
     for (const candidate of scan.candidates) {
       const result = await registry.register(candidate.path, { machineId: workspace.machineId });
       if (result.outcome === 'created') registered++;
-      else if (result.outcome === 'location-added') linked++;
+      else if (result.outcome === 'location-added') {
+        if (hasLocationOnAnotherMachine(result.project, workspace.machineId)) linked++;
+        else extraCopies++;
+      }
     }
   }
 
@@ -141,6 +146,7 @@ async function runInit(options: InitOptions): Promise<void> {
       roots: chosenRoots,
       projects_registered: registered,
       locations_linked: linked,
+      extra_copies_linked: extraCopies,
       projects_total: projects.length,
       claude_integration: claudeResult?.status ?? 'skipped',
     });
@@ -157,6 +163,9 @@ async function runInit(options: InitOptions): Promise<void> {
   if (chosenRoots.length > 0) {
     success(`${pluralize(projects.length, 'project')} discovered`);
     if (linked > 0) success(`${linked} already known from another machine, now linked here`);
+    if (extraCopies > 0) {
+      success(`${pluralize(extraCopies, 'extra copy', 'extra copies')} of a known project linked`);
+    }
     if (activeRecently > 0) success(`${activeRecently} active in the last 30 days`);
     if (deployments > 0) success(`${pluralize(deployments, 'deployment')} registered`);
   }

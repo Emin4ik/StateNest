@@ -1,4 +1,5 @@
 import type { Project } from './schema.js';
+import { contractHome } from '../util/paths.js';
 
 /**
  * Turning what the user typed into the project they meant.
@@ -155,4 +156,49 @@ export function subsequenceScore(haystack: string, needle: string): number | nul
 
   // Penalise long names so a short, tight match wins over a sprawling one.
   return gaps * 10 + (haystack.length - needle.length);
+}
+
+/**
+ * Something short that tells two projects of the same name apart.
+ *
+ * Two unrelated repositories called `threads` is an ordinary situation - one at
+ * work, one personal - and StateNest deliberately never merges them, because
+ * identity comes from the git remote and not from the name. But a list showing
+ * `threads` twice, and an "ambiguous" error offering `1. threads  2. threads`,
+ * leaves the user with no way to act.
+ *
+ * Preference order is what the user can actually type back: the repository path
+ * resolves as a `repository` match, and the id resolves as an `id` match. The
+ * local path is last, because it identifies the checkout rather than the
+ * project - but it is the only thing that distinguishes two local-only repos.
+ */
+export function projectQualifier(project: Project): string {
+  const repositoryPath = project.repository?.path;
+  if (repositoryPath) return repositoryPath;
+
+  const location = project.local_locations[0];
+  if (location) return contractHome(location.path);
+
+  return project.id;
+}
+
+/**
+ * Display labels for a list of projects, qualified only where they collide.
+ *
+ * Unique names are left alone: qualifying everything would make every listing
+ * noisier to fix a case that is usually absent.
+ */
+export function projectLabels(projects: readonly Project[]): Map<string, string> {
+  const counts = new Map<string, number>();
+  for (const project of projects) {
+    const key = project.name.toLowerCase();
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  const labels = new Map<string, string>();
+  for (const project of projects) {
+    const collides = (counts.get(project.name.toLowerCase()) ?? 0) > 1;
+    labels.set(project.id, collides ? `${project.name} (${projectQualifier(project)})` : project.name);
+  }
+  return labels;
 }

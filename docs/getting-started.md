@@ -1,5 +1,9 @@
 # Getting started
 
+> The short version. For the mental model, what `scan` actually does and how
+> the Claude Code integration works, read the [user guide](user-guide.md); for
+> every command and option, the [command reference](command-reference.md).
+
 ## Install
 
 ```bash

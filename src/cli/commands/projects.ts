@@ -15,6 +15,7 @@ import { latest } from '../../core/context.js';
 import { relativeTime } from '../../util/time.js';
 import { contractHome } from '../../util/paths.js';
 import type { Project } from '../../core/schema.js';
+import { projectLabels } from '../../core/resolve.js';
 
 export function projectsCommand(): Command {
   return new Command('projects')
@@ -57,7 +58,9 @@ export function projectsCommand(): Command {
         return;
       }
 
-      print(renderTable(sorted, projectColumns(workspace.machineId, machineNames)));
+      print(
+        renderTable(sorted, projectColumns(workspace.machineId, machineNames, projectLabels(sorted))),
+      );
       print('');
       print(style.dim(summaryLine(all, sorted, workspace.profile.name)));
     });
@@ -156,12 +159,16 @@ export function effectiveActivity(project: Project): string | null {
 function projectColumns(
   machineId: string,
   machineNames: Map<string, string>,
+  labels: Map<string, string>,
 ): Column<Project>[] {
   return [
     {
       header: 'project',
-      value: (project) => project.name,
-      maxWidth: 32,
+      // Labels rather than names: two unrelated repositories may both be called
+      // `threads`, and two identical rows tell the reader nothing. Only
+      // colliding names are qualified, so the usual listing is unchanged.
+      value: (project) => labels.get(project.id) ?? project.name,
+      maxWidth: 44,
       paint: (text) => style.bold(text),
     },
     {

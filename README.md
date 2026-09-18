@@ -243,6 +243,8 @@ and WSL.
 
 | | |
 | --- | --- |
+| [User guide](docs/user-guide.md) | **Start here.** The mental model, what scan really does, the Claude Code lifecycle |
+| [Command reference](docs/command-reference.md) | Every command and option |
 | [Getting started](docs/getting-started.md) | Install, first scan, first checkpoint |
 | [Claude Code](docs/claude-code.md) | Hooks, skills, MCP tools, latency |
 | [Data model](docs/data-model.md) | Every file and field |
