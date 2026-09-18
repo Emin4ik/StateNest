@@ -19,7 +19,6 @@ export function initCommand(): Command {
   return new Command('init')
     .description('Set up Project Brain on this machine')
     .option('-y, --yes', 'accept every default, ask nothing')
-    .option('--profile <name>', 'profile to create or use', 'personal')
     .option('--machine-name <name>', 'what to call this computer')
     .option('--roots <dirs...>', 'directories that contain your projects')
     .option('--no-scan', 'set up without scanning for projects')
@@ -35,7 +34,6 @@ export function initCommand(): Command {
 
 interface InitOptions {
   yes?: boolean;
-  profile: string;
   machineName?: string;
   roots?: string[];
   scan: boolean;
@@ -68,9 +66,13 @@ async function runInit(options: InitOptions): Promise<void> {
   if (!wantsJson()) printPrivacySummary(globals.home ?? homePath);
 
   // -- Home and profile ----------------------------------------------------
+  // `--profile` is a global option, parsed wherever it appears in the command
+  // line. Declaring it again on this subcommand meant the global one always
+  // consumed the value and this one silently kept its default, so `pb init
+  // --profile work` created a profile called "personal".
   const workspace = await Workspace.initialize({
     ...(globals.home ? { home: globals.home } : {}),
-    profileName: options.profile,
+    profileName: globals.profile ?? 'personal',
   });
   resetContext();
 

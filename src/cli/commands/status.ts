@@ -66,6 +66,20 @@ export function statusCommand(): Command {
       }
 
       print('');
+
+      if (projects.length === 0) {
+        heading('Nothing tracked yet.');
+        print('');
+        print(style.dim('  Project Brain finds projects by scanning directories you name:'));
+        print('');
+        print(`    ${style.cyan('pb scan ~/Projects ~/Work')}`);
+        print(`    ${style.cyan('pb add .')}                   ${style.dim('register the current directory')}`);
+        print('');
+        print(style.dim(`  profile: ${workspace.profile.name}  ·  ${contractHome(workspace.paths.home)}`));
+        print('');
+        return;
+      }
+
       heading(`${pluralize(projects.length, 'project')}`);
       print('');
       for (const status of ['active', 'paused', 'waiting', 'archived'] as const) {
@@ -110,6 +124,22 @@ export function statusCommand(): Command {
         print(style.dim(`  pb projects --stale ${staleDays}   to review them`));
       }
 
+      // A status report with nothing to report should say so, and point
+      // somewhere useful, rather than trailing off after a table of counts.
+      if (dirty.length === 0 && blocked.length === 0 && stale.length === 0) {
+        print('');
+        print(`  ${style.green('Nothing needs attention.')}`);
+        print('');
+        print(style.dim('  pb recent    what you have been working on'));
+        print(style.dim('  pb projects  everything Project Brain knows about'));
+      }
+
+      print('');
+      print(
+        style.dim(
+          `  profile: ${workspace.profile.name}  \u00b7  machine: ${(await workspace.currentMachine())?.name ?? workspace.machineId}`,
+        ),
+      );
       print('');
     });
 }

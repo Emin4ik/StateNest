@@ -6,6 +6,7 @@ import { writeDataRepoScaffolding } from '../../core/workspace.js';
 import { contractHome } from '../../util/paths.js';
 import { now } from '../../util/time.js';
 import { confirm, closePrompts } from '../prompt.js';
+import { BrainError } from '../../util/errors.js';
 
 export function syncCommand(): Command {
   const command = new Command('sync').description(
@@ -22,6 +23,41 @@ export function syncCommand(): Command {
       try {
         const { workspace } = await openContext();
         const sync = new ProfileSync(workspace.profilePaths, workspace.paths.home);
+
+        // Validate before saying anything else. Printing a privacy warning and
+        // asking for confirmation about a string that is not a git remote asks
+        // the user to think about the wrong problem.
+        // A remote is acceptable if it is a real hosted repository, or a local
+        // path that actually exists (a bare repo on a NAS is a legitimate
+        // backup target). Anything else - a typo, a sentence - is rejected
+        // before the user is asked to think about privacy.
+        const { normalizeRemoteUrl } = await import('../../git/remote-url.js');
+        const { pathExists } = await import('../../util/fs-atomic.js');
+        const parsed = normalizeRemoteUrl(remote);
+        const isLocalPath = parsed !== null && !parsed.stableAcrossMachines;
+
+        if (!parsed || (isLocalPath && !(await pathExists(parsed.path)))) {
+          throw new BrainError('INVALID_REMOTE', `"${remote}" is not a git remote.`, {
+            details: [
+              isLocalPath
+                ? 'It looks like a local path, but nothing exists there.'
+                : 'It is not a recognisable git URL.',
+            ],
+            hints: [
+              'pb sync init git@github.com:you/project-brain-data.git',
+              'pb sync init https://github.com/you/project-brain-data.git',
+              'Create the repository first - it must be PRIVATE.',
+            ],
+          });
+        }
+
+        if (isLocalPath) {
+          print('');
+          print(
+            style.yellow('  That is a local path, so it is a backup on this machine only.'),
+          );
+          print(style.dim('  It will not carry your data to another computer.'));
+        }
 
         print('');
         heading(`Sync profile "${workspace.profile.name}"`);

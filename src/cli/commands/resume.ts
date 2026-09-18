@@ -148,6 +148,13 @@ function render(
 
   // -- The actual brief ----------------------------------------------------
   section('Current focus', brief.currentFocus ? [brief.currentFocus] : []);
+  // The single most useful sentence in the whole brief when no explicit focus
+  // has been set, and it was previously only visible behind --full.
+  if (!brief.currentFocus && brief.lastSummary) {
+    print('');
+    print(`  ${style.bold('Last session')}`);
+    print(`    ${brief.lastSummary}`);
+  }
   section('Recently completed', brief.recentlyCompleted.slice(0, 5));
   section('Blockers', brief.blockers, style.yellow);
   numberedSection('Next', brief.nextActions.slice(0, 6));

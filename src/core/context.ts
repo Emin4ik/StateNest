@@ -89,6 +89,15 @@ export interface ResumeBrief {
   otherLocations: { location: ProjectLocation; machine: Machine | null }[];
   deployments: { environment: string; remote: Remote | null; path?: string; branch?: string }[];
   currentFocus: string | null;
+  /**
+   * The most recent checkpoint's summary.
+   *
+   * Surfaced because dogfooding showed the gap: a brief could list five things
+   * completed and four things next, while never once saying what the work was
+   * actually about. That sentence already existed - it was just hidden behind
+   * `--full`.
+   */
+  lastSummary: string | null;
   /** Prose from state.md, already split into its sections. */
   stateSections: Map<string, string>;
   recentlyCompleted: string[];
@@ -158,6 +167,7 @@ export async function buildResumeBrief(
     currentFocus: scrubNullable(
       project.current_focus ?? sectionText(stateSections, 'current focus') ?? null,
     ),
+    lastSummary: checkpoints[0] ? scrub(firstLine(checkpoints[0].summary)) : null,
     stateSections,
     recentlyCompleted: scrubAll(collectRecent(checkpoints, (checkpoint) => checkpoint.completed, 6)),
     blockers: scrubAll(
@@ -167,10 +177,18 @@ export async function buildResumeBrief(
         ...openTasks.filter((task) => task.status === 'blocked').map((task) => task.text),
       ]).slice(0, 6),
     ),
+    // Checkpoint "next" items come first: they are the most recent statement
+    // of intent, written at the moment the work stopped. Open tasks follow,
+    // newest first. Before this, insertion-ordered tasks pushed the urgent
+    // next step below aspirational ideas added weeks earlier.
     nextActions: scrubAll(
       dedupe([
-        ...openTasks.filter((task) => task.status !== 'blocked').map((task) => task.text),
-        ...collectRecent(checkpoints, (checkpoint) => checkpoint.next, 4),
+        ...collectRecent(checkpoints, (checkpoint) => checkpoint.next, 5),
+        ...openTasks
+          .filter((task) => task.status !== 'blocked')
+          .slice()
+          .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+          .map((task) => task.text),
       ]).slice(0, 8),
     ),
     openTasks: openTasks.map((task) => ({ ...task, text: scrub(task.text) })),
@@ -218,6 +236,9 @@ export function renderSessionContext(
 
   const sections: [string, string[]][] = [
     ['Current focus', brief.currentFocus ? [brief.currentFocus] : []],
+    // Without an explicit focus, the last checkpoint's summary is the best
+    // available answer to "what is this about right now".
+    ['Last session', brief.currentFocus || !brief.lastSummary ? [] : [brief.lastSummary]],
     ['Recently completed', brief.recentlyCompleted.slice(0, 4)],
     ['Open blockers', brief.blockers.slice(0, 3)],
     ['Next', brief.nextActions.slice(0, 5)],

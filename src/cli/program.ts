@@ -25,6 +25,7 @@ import { dashboardCommand } from './commands/dashboard.js';
 import { exportCommand, importCommand } from './commands/export.js';
 import { uninstallCommand } from './commands/uninstall.js';
 import { migrateCommand } from './commands/migrate.js';
+import { profileCommand } from './commands/profile.js';
 
 /**
  * The `pb` command tree.
@@ -97,6 +98,7 @@ export function buildProgram(version: string): Command {
   program.addCommand(deployCommand());
 
   // Setup and safety
+  program.addCommand(profileCommand());
   program.addCommand(integrateCommand());
   program.addCommand(privacyCommand());
   program.addCommand(syncCommand());
