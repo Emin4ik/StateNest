@@ -16,6 +16,7 @@ import {
 import { contractHome } from '../../util/paths.js';
 import type { ProfilePaths } from '../../core/paths.js';
 import { now } from '../../util/time.js';
+import { INSTALL_COMMAND } from '../../core/metadata.js';
 
 /**
  * Bring stored records up to the current schema version.
@@ -83,7 +84,7 @@ export function migrateCommand(): Command {
           );
           print(style.dim('  These are left completely untouched, and their extra fields are'));
           print(style.dim('  preserved. Update Project Brain so it understands them fully:'));
-          print(bullet(style.cyan('npm install -g project-brain@latest')));
+          print(bullet(style.cyan(`${INSTALL_COMMAND}@latest`)));
           print('');
         }
 

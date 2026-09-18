@@ -17,6 +17,7 @@ import {
 } from '../../integrations/claude/install.js';
 import { SCHEMA_VERSION } from '../../core/schema.js';
 import { fileURLToPath } from 'node:url';
+import { INSTALL_COMMAND } from '../../core/metadata.js';
 
 type Level = 'ok' | 'warn' | 'fail' | 'skip';
 
@@ -124,7 +125,7 @@ export function doctorCommand(): Command {
               : `data is v${configVersion}, this build understands v${SCHEMA_VERSION}`,
           ...(configVersion <= SCHEMA_VERSION
             ? {}
-            : { fix: 'Update Project Brain: npm install -g project-brain@latest' }),
+            : { fix: `Update Project Brain: ${INSTALL_COMMAND}@latest` }),
         });
 
         // -- Data integrity ---------------------------------------------------
@@ -228,7 +229,7 @@ async function claudeChecks(pluginDir: string | null): Promise<Check[]> {
       name: 'Plugin files',
       level: 'fail',
       detail: 'the bundled plugin could not be located',
-      fix: 'npm install -g project-brain',
+      fix: INSTALL_COMMAND,
     });
     return checks;
   }
@@ -244,7 +245,7 @@ async function claudeChecks(pluginDir: string | null): Promise<Check[]> {
     detail: hookBuilt && mcpBuilt ? 'hook and MCP entry points present' : 'compiled output missing',
     ...(hookBuilt && mcpBuilt
       ? {}
-      : { fix: 'npm run build   (in a checkout), or: npm install -g project-brain' }),
+      : { fix: `npm run build   (in a checkout), or: ${INSTALL_COMMAND}` }),
   });
 
   const enabled = await isPluginEnabled();
@@ -264,7 +265,7 @@ async function claudeChecks(pluginDir: string | null): Promise<Check[]> {
       name: label,
       level: exists ? 'ok' : 'fail',
       detail: exists ? relative : `${relative} is missing from the plugin`,
-      ...(exists ? {} : { fix: 'Reinstall: npm install -g project-brain' }),
+      ...(exists ? {} : { fix: `Reinstall: ${INSTALL_COMMAND}` }),
     });
   }
 

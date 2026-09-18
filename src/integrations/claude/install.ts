@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { pathExists, readFileOrNull } from '../../util/fs-atomic.js';
 import { errnoCode } from '../../util/errors.js';
+import { INSTALL_COMMAND } from '../../core/metadata.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -78,9 +79,24 @@ export async function isClaudeCodeInstalled(): Promise<boolean> {
   }
 }
 
+/**
+ * Where Claude Code keeps its configuration.
+ *
+ * `CLAUDE_CONFIG_DIR` is Claude Code's own setting for relocating this, and
+ * honouring it is not optional: CONTRIBUTING.md tells contributors to point it
+ * at a scratch directory before testing an integration, precisely so they do
+ * not touch their real configuration. Reading `~/.claude` regardless made that
+ * instruction false — the most dangerous kind of documentation, because the
+ * person following it believes they are protected.
+ */
+export function claudeConfigDir(): string {
+  const configured = process.env['CLAUDE_CONFIG_DIR']?.trim();
+  return configured ? configured : join(homedir(), '.claude');
+}
+
 /** Claude Code's home directory, if the user has ever run it. */
 export async function claudeHomeExists(): Promise<boolean> {
-  return pathExists(join(homedir(), '.claude'));
+  return pathExists(claudeConfigDir());
 }
 
 export interface InstallOptions {
@@ -107,7 +123,7 @@ export async function installClaudeIntegration(
       ...base,
       status: 'plugin-dir-not-found',
       message:
-        'Could not find the bundled Claude Code plugin. Reinstall Project Brain with: npm install -g project-brain',
+        `Could not find the bundled Claude Code plugin. Reinstall Project Brain with: ${INSTALL_COMMAND}`,
     };
   }
 
@@ -119,7 +135,8 @@ export async function installClaudeIntegration(
       status: 'build-missing',
       pluginDir,
       message:
-        'The plugin is present but not built. Run `npm run build` in the Project Brain checkout, or install the published package with `npm install -g project-brain`.',
+        'The plugin is present but not built. Run `npm run build` in the Project Brain ' +
+        `checkout, or install the published package with: ${INSTALL_COMMAND}`,
     };
   }
 
@@ -228,7 +245,7 @@ export async function uninstallClaudeIntegration(
  * The file is only ever read here, never written.
  */
 export async function isPluginEnabled(): Promise<boolean> {
-  const raw = await readFileOrNull(join(homedir(), '.claude', 'settings.json'));
+  const raw = await readFileOrNull(join(claudeConfigDir(), 'settings.json'));
   if (!raw) return false;
   try {
     const parsed: unknown = JSON.parse(raw);

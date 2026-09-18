@@ -38,6 +38,15 @@ export const CLI_COMMAND = 'pb';
 export const DISPLAY_NAME = 'Project Brain';
 
 /**
+ * How a user installs this, as printed in `pb doctor` fixes and error hints.
+ *
+ * Hardcoding it meant seven user-facing messages told people to run
+ * `npm install -g project-brain` — which, since that name belongs to someone
+ * else, would install an unrelated package.
+ */
+export const INSTALL_COMMAND = `npm install -g ${PACKAGE_NAME}`;
+
+/**
  * GitHub owner and repository.
  *
  * Deliberately not a plausible-looking name. A placeholder that reads like a

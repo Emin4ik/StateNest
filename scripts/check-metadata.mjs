@@ -167,6 +167,31 @@ for (const file of TEXT_FILES) {
   }
 }
 
+// --- hardcoded install instructions in source -------------------------------
+// Seven user-facing messages told people to run `npm install -g project-brain`.
+// A hardcoded package name in a fix hint sends users to whoever owns that name.
+function walkSource(dir, visit) {
+  for (const entry of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+    const rel = `${dir}/${entry.name}`;
+    if (entry.isDirectory()) walkSource(rel, visit);
+    else if (entry.name.endsWith('.ts')) visit(rel);
+  }
+}
+
+try {
+  walkSource('src', (file) => {
+    const contents = read(file);
+    if (!contents) return;
+    // metadata.ts is where the name legitimately lives.
+    if (file === 'src/core/metadata.ts') return;
+    for (const match of contents.matchAll(/npm install -g ([\w@/-]+)/g)) {
+      problems.push(`${file} hardcodes \`${match[0]}\` instead of using INSTALL_COMMAND`);
+    }
+  });
+} catch {
+  notes.push('could not scan src/ for hardcoded install commands');
+}
+
 // --- report -----------------------------------------------------------------
 process.stdout.write('\nProject metadata\n\n');
 process.stdout.write(`  package       ${META.packageName}@${pkg.version}\n`);
