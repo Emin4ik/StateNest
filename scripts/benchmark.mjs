@@ -210,24 +210,31 @@ const header = [
   'p90',
   'brief',
 ];
-const widths = [8, 11, 8, 11, 9, 9, 8, 16, 6, 7];
+const body = rows.map((row) => [
+  String(row.scale),
+  String(row.checkpoints),
+  `${row.scan.toFixed(0)}ms`,
+  `${row.projects.toFixed(0)}ms`,
+  `${row.recent.toFixed(0)}ms`,
+  `${row.search.toFixed(0)}ms`,
+  `${row.resume.toFixed(0)}ms`,
+  `${row.sessionStart.toFixed(0)}ms`,
+  `${row.sessionStartP90.toFixed(0)}ms`,
+  `${row.briefBytes}B`,
+]);
 
-process.stdout.write('\n  ' + header.map((h, i) => h.padEnd(widths[i])).join('') + '\n');
-for (const row of rows) {
-  const cells = [
-    String(row.scale),
-    String(row.checkpoints),
-    `${row.scan.toFixed(0)}ms`,
-    `${row.projects.toFixed(0)}ms`,
-    `${row.recent.toFixed(0)}ms`,
-    `${row.search.toFixed(0)}ms`,
-    `${row.resume.toFixed(0)}ms`,
-    `${row.sessionStart.toFixed(0)}ms`,
-    `${row.sessionStartP90.toFixed(0)}ms`,
-    `${row.briefBytes}B`,
-  ];
-  process.stdout.write('  ' + cells.map((c, i) => c.padEnd(widths[i])).join('') + '\n');
-}
+// Measured, not hardcoded. Fixed widths were narrower than their own headers,
+// so the columns ran together into `projectscheckpointsscan` and the table was
+// unreadable exactly when someone was trying to read a number off it.
+const widths = header.map((label, index) =>
+  Math.max(label.length, ...body.map((cells) => cells[index].length)) + 2,
+);
+
+const line = (cells) =>
+  '  ' + cells.map((cell, index) => cell.padEnd(widths[index])).join('').trimEnd() + '\n';
+
+process.stdout.write('\n' + line(header));
+for (const cells of body) process.stdout.write(line(cells));
 
 process.stdout.write(
   '\n  SessionStart is measured as a real process, so it includes Node startup\n' +

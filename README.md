@@ -1,5 +1,13 @@
 # Project Brain
 
+> **Pre-release. Not published, and not installable by the name below.**
+>
+> `project-brain` on npm is an unrelated project by another author, and
+> "Project Brain" is a name already in use. This project is being renamed
+> before its first release — see
+> [docs/research/project-name.md](docs/research/project-name.md). Until then,
+> install it from a clone (see [Install](#install)).
+
 **You have forty projects. You cannot remember where you stopped in any of them.**
 
 Which repo was that? Where did I clone it on this laptop? Which VPS runs it?
@@ -85,9 +93,14 @@ That is the product.
 ## Install
 
 ```bash
-npm install -g project-brain
+git clone <this repository>
+cd project-brain
+npm ci && npm run build && npm link
 pb init
 ```
+
+Once the project is renamed and published, this becomes a single
+`npm install -g <name>`.
 
 `pb init` asks which directories hold your projects, scans them, and shows you
 what it found. It takes about two minutes, and it tells you exactly what it
@@ -107,8 +120,8 @@ pb integrate claude
 ```
 
 Now, when you open Claude Code inside a registered project, it already knows
-where you left off — roughly 500 characters of the right context, not a dump
-of your history:
+where you left off — about 600 characters of the right context, not a dump of
+your history:
 
 ```
 # Project Brain
@@ -132,7 +145,10 @@ You also get skills — `/project-brain:resume`, `/project-brain:checkpoint`,
 `/project-brain:where` — and MCP tools that Claude uses on its own when you
 ask "what was I doing yesterday?".
 
-Project Brain adds about **116ms** to session start and never spawns a model.
+Project Brain adds about **90ms** to session start — including Node's own
+startup — and never spawns a model. That figure is flat from 10 projects to
+500, because session start resolves the project by a hash of its git remote
+rather than by searching. Reproduce it with `npm run bench`.
 
 ---
 
@@ -153,6 +169,7 @@ pb task add "..."            record a next action
 pb decision add "..."        record why you chose something
 pb remote import-ssh         pick servers from your ~/.ssh/config
 pb deploy add <project> ...  record where a project runs
+pb profile create work       keep work and personal separate
 pb doctor                    check everything, with fixes
 pb privacy audit             scan your own data for secrets
 ```
@@ -182,6 +199,12 @@ Project Brain is about to write passes through a secret scanner first. Run
 Full detail: [docs/security-model.md](docs/security-model.md).
 
 ### Work and personal are separate directories
+
+```bash
+pb profile create work        # a separate set of projects
+pb profile use work           # switch
+pb profile list               # see them all
+```
 
 ```
 ~/.project-brain/profiles/personal/   your own repo, your own remote

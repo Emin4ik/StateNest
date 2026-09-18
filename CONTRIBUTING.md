@@ -8,7 +8,7 @@ all of their work, so the bar is correctness and clarity over speed.
 ```bash
 git clone https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN
 cd project-brain
-npm install
+npm ci
 npm run build
 npm test
 ```
@@ -30,13 +30,22 @@ node dist/cli/bin.js init --yes
 ## Before opening a pull request
 
 ```bash
-npm run typecheck
-npm run lint
-npm test
-npm run build
+npm run verify
 ```
 
-CI runs all four on Ubuntu, macOS and Windows.
+That is typecheck, lint, the control-byte check, the full test suite and a
+build. CI runs it on Ubuntu, macOS and Windows, against Node 22.12 and 24.
+
+If you touched anything that ships — `package.json`, the plugin manifests, a
+zod schema, the generated JSON Schemas — run the release gate too:
+
+```bash
+npm run release:check
+```
+
+It adds a schema-drift check, a verification of the packed tarball as actually
+installed, and the metadata gate. It exits non-zero today on purpose: the
+project name is unresolved. See [docs/release-readiness.md](docs/release-readiness.md).
 
 ## What we look for
 

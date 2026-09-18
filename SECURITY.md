@@ -1,5 +1,9 @@
 # Security policy
 
+> **Pre-release.** No repository has been published yet, so the advisory link
+> below does not resolve. Until it does, report anything you find to whoever
+> gave you this code.
+
 ## Reporting a vulnerability
 
 Please report security issues privately through

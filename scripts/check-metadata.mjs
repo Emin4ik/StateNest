@@ -157,6 +157,14 @@ for (const file of TEXT_FILES) {
   if (/project-brain\.dev/.test(contents)) {
     problems.push(`${file} references the placeholder domain project-brain.dev`);
   }
+  // `claude plugin install <plugin>@<marketplace>` is written out in prose and
+  // is not a URL, so nothing else here would notice it going stale on a rename.
+  for (const match of contents.matchAll(/claude plugin install (\S+)@(\S+)/g)) {
+    const [line, plugin, marketplace] = match;
+    if (plugin !== META.packageName || marketplace !== META.packageName) {
+      problems.push(`${file} says \`${line}\`, but the plugin is "${META.packageName}"`);
+    }
+  }
 }
 
 // --- report -----------------------------------------------------------------
