@@ -90,7 +90,11 @@ rewriteJson('.claude-plugin/marketplace.json', (marketplace) => {
   marketplace.owner = { ...marketplace.owner, url: REPOSITORY_URL };
   for (const entry of marketplace.plugins ?? []) {
     entry.name = PACKAGE_NAME;
-    if (entry.source?.source === 'npm') entry.source.package = PACKAGE_NAME;
+    // Deliberately not an npm source. The marketplace manifest ships *inside*
+    // the package, so "./" is the plugin itself; pointing at the registry made
+    // Claude Code download a second copy, which fails before publication and
+    // would have fetched whoever owns that name if it were taken.
+    entry.source = './';
   }
 });
 

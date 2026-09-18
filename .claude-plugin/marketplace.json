@@ -8,10 +8,7 @@
     {
       "name": "statenest",
       "description": "Local-first developer control plane: projects, machines, deployments and session checkpoints.",
-      "source": {
-        "source": "npm",
-        "package": "statenest"
-      }
+      "source": "./"
     }
   ],
   "description": "StateNest: a local-first developer control plane that remembers your projects, machines, deployments and where you left off."

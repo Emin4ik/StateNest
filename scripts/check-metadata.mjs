@@ -114,8 +114,19 @@ if (plugin.version !== pkg.version) {
 
 const marketplace = JSON.parse(read('.claude-plugin/marketplace.json') ?? '{}');
 const entry = marketplace.plugins?.[0];
-if (entry?.source?.package && entry.source.package !== META.packageName) {
-  problems.push(`marketplace source package is ${JSON.stringify(entry.source.package)}`);
+// The marketplace manifest ships inside the package, so the plugin's source is
+// the marketplace root. An npm source makes Claude Code fetch a *second* copy
+// from the registry: it fails before publication, it can drift from the
+// installed CLI afterwards, and under the project's previous name — which
+// belonged to someone else — it would have installed a stranger's package and
+// run it as a plugin with hooks.
+if (entry && entry.source !== './') {
+  problems.push(
+    `marketplace plugin source is ${JSON.stringify(entry.source)}, expected "./"`,
+  );
+}
+if (entry?.name !== META.packageName) {
+  problems.push(`marketplace plugin name is ${JSON.stringify(entry?.name)}`);
 }
 if (marketplace.owner?.url && marketplace.owner.url !== META.repositoryUrl) {
   problems.push(`marketplace owner.url is ${JSON.stringify(marketplace.owner.url)}`);
