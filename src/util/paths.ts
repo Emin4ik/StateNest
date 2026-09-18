@@ -101,10 +101,24 @@ export function pathKey(path: string, platform = process.platform): string {
  * best guess is better than refusing to record a location at all.
  */
 export async function resolveRealPath(path: string): Promise<string> {
-  const { realpath } = await import('node:fs/promises');
+  const [{ realpath: realpathCb }, { promisify }] = await Promise.all([
+    import('node:fs'),
+    import('node:util'),
+  ]);
+
+  // `native` also expands Windows 8.3 short names, which plain `realpath`
+  // leaves alone. Without it one directory can be spelled two ways -
+  // `C:\\Users\\RUNNER~1\\...` and `C:\\Users\\runneradmin\\...` are the same place, and
+  // `%TEMP%` really is short-form whenever the account name exceeds eight
+  // characters. That is the Windows shape of the /tmp -> /private/tmp bug this
+  // function already exists to prevent. Only the callback form is typed.
   try {
-    return await realpath(path);
+    return await promisify(realpathCb.native)(path);
   } catch {
-    return path;
+    try {
+      return await promisify(realpathCb)(path);
+    } catch {
+      return path;
+    }
   }
 }

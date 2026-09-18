@@ -51,7 +51,11 @@ export function assertWritable(filePath: string): void {
 
   if (roots.length === 0) return;
 
-  const permitted = roots.some((root) => target === root || target.startsWith(root + sep));
+  const key = comparisonKey(target);
+  const permitted = roots.some((root) => {
+    const rootKey = comparisonKey(root);
+    return key === rootKey || key.startsWith(rootKey + sep);
+  });
   if (!permitted) throw new WriteGuardError(target, roots.join(', '));
 }
 
@@ -75,7 +79,7 @@ function canonicalize(path: string): string {
 
   for (let depth = 0; depth < 64; depth++) {
     try {
-      return [realpathSync(existing), ...trailing].join(sep);
+      return [realpath(existing), ...trailing].join(sep);
     } catch {
       const parent = dirname(existing);
       if (parent === existing) return absolute;
@@ -85,6 +89,40 @@ function canonicalize(path: string): string {
   }
 
   return absolute;
+}
+
+/**
+ * Resolve one existing path, expanding Windows 8.3 short names.
+ *
+ * `realpathSync` follows symlinks but leaves a short name alone, so on Windows
+ * the same directory can be spelled two ways: the runner's `TEMP` is
+ * `C:\Users\RUNNER~1\AppData\Local\Temp` while `os.tmpdir()` hands back
+ * `C:\Users\runneradmin\AppData\Local\Temp`. A prefix comparison between
+ * those two fails, and this guard then refused every legitimate write - 290
+ * tests, on the first Windows CI run. `realpathSync.native` returns the long
+ * form with the filesystem's own casing.
+ */
+function realpath(target: string): string {
+  try {
+    return realpathSync.native(target);
+  } catch {
+    // `native` can fail where the JS implementation succeeds; either result is
+    // better than giving up on resolution entirely.
+    return realpathSync(target);
+  }
+}
+
+/**
+ * The form two paths must share to be considered the same.
+ *
+ * NTFS and APFS-by-default are case-insensitive, so `C:\Temp` and `c:\temp`
+ * are one directory. Comparing them literally would let a guarded write slip
+ * through on a technicality, or - as happened - block one that was fine.
+ * Only Windows is folded here: Linux is genuinely case-sensitive, and folding
+ * there would make the guard weaker than the filesystem it protects.
+ */
+function comparisonKey(path: string): string {
+  return process.platform === 'win32' ? path.toLowerCase() : path;
 }
 
 /** True when the guard is armed. Used by the test bootstrap to prove isolation. */

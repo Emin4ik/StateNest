@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { homedir, tmpdir } from 'node:os';
 import { realpathSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { writeFileAtomic } from '../../src/util/fs-atomic.js';
 import { assertWritable, isWriteGuardArmed } from '../../src/util/write-guard.js';
@@ -68,5 +68,45 @@ describe('test isolation', () => {
       const root = realpathSync(tmpdir());
       expect(() => assertWritable(`${root}-evil/file`)).toThrow();
     });
+  });
+});
+
+/**
+ * Two spellings of one directory.
+ *
+ * The first Windows CI run failed 290 tests because the guard compared the
+ * runner's `TEMP` (`C:\Users\RUNNER~1\...`, an 8.3 short name) against
+ * `os.tmpdir()` (`C:\Users\runneradmin\...`). Same directory, different
+ * spelling, so a prefix comparison said "outside the allowed root" and every
+ * legitimate write was refused.
+ *
+ * `realpathSync.native` expands short names and returns the filesystem's own
+ * casing; the comparison folds case on Windows only, because Linux genuinely
+ * distinguishes `/tmp/A` from `/tmp/a` and folding there would make the guard
+ * weaker than the filesystem it protects.
+ */
+describe('the write guard compares paths the way the filesystem does', () => {
+  it('permits a write through a differently-cased spelling of the root', async () => {
+    const { assertWritable } = await import('../../src/util/write-guard.js');
+    const root = process.env['STATENEST_WRITE_ROOT']!.split(process.platform === 'win32' ? ';' : ':')[0]!;
+
+    const target = join(root, 'case-check', 'file.txt');
+    expect(() => assertWritable(target)).not.toThrow();
+
+    if (process.platform === 'win32' || process.platform === 'darwin') {
+      // On a case-insensitive filesystem the same path in another case is the
+      // same file, and must be treated as such.
+      const swapped = target.replace(/[a-z]/, (c) => c.toUpperCase());
+      expect(() => assertWritable(swapped)).not.toThrow();
+    }
+  });
+
+  it('still refuses a path that only shares a name prefix with a root', async () => {
+    const { assertWritable } = await import('../../src/util/write-guard.js');
+    // The armed roots include the whole temp directory, so a sibling *of that*
+    // is the only way to test the prefix boundary: `<tmp>-elsewhere` starts
+    // with the same characters as `<tmp>` but is not inside it.
+    const outside = `${realpathSync(tmpdir())}-elsewhere${sep}file.txt`;
+    expect(() => assertWritable(outside)).toThrow();
   });
 });
