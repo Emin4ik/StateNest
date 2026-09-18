@@ -42,7 +42,8 @@
     "LICENSE",
     "CHANGELOG.md",
     "scripts/build-plugin.mjs",
-    "!dist/mcp"
+    "!dist/mcp",
+    "!dist/**/*.map"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/build-plugin.mjs",
@@ -67,6 +68,7 @@
     "verify:package": "node scripts/verify-package.mjs",
     "smoke:install": "node scripts/smoke-install.mjs",
     "bench": "node scripts/benchmark.mjs",
+    "demo": "node scripts/demo.mjs",
     "release:check": "npm run verify && npm run check:schemas && npm run verify:package && npm run check:metadata"
   },
   "dependencies": {

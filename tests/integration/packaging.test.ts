@@ -328,6 +328,15 @@ describe('the published CLI declares everything it needs', () => {
     ).toEqual([]);
   }, PROCESS_TIMEOUT);
 
+  it('does not publish dangling source maps', async () => {
+    // Every .map in dist/ points at ../../src/*.ts with no embedded
+    // sourcesContent, and src/ is not published — so in an installed package
+    // they resolve to nothing while costing 43% of dist/. They are still
+    // generated for local development, where src/ is right there.
+    const maps = (await packedFiles()).filter((file) => file.endsWith('.map'));
+    expect(maps).toEqual([]);
+  }, PROCESS_TIMEOUT);
+
   it('does not publish the unbundled MCP server', async () => {
     // It is the only thing that imported the SDK. If it comes back, so does the
     // 90-package dependency tree, and the `files` negation has stopped working.
