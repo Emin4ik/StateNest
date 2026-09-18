@@ -65,7 +65,11 @@ jobs:
           # it and is one of the versions CI already tests against.
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
-          cache: npm
+          # Deliberately no dependency cache. npm's own trusted-publishing
+          # example says never to cache in a release build, and the reason is
+          # sound: a restored cache is content this job did not fetch and did
+          # not verify. A release is the one build where an extra 30 seconds is
+          # worth more than the cache.
 
       - name: Require an npm new enough for trusted publishing
         run: |
