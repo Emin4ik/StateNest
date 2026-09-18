@@ -16,7 +16,7 @@ import { redactSecrets } from '../security/redact.js';
 /**
  * Redact stored prose on the way out, not only on the way in.
  *
- * The write path already scrubs anything Project Brain persists, but that only
+ * The write path already scrubs anything StateNest persists, but that only
  * protects data this build wrote. Text can reach `state.md` or a checkpoint
  * another way: a hand edit, a sync from a machine running an older version, or
  * a build that predates the scanner. Trusting it because it is already on disk
@@ -39,7 +39,7 @@ function scrubAll(values: readonly string[]): string[] {
  *
  * `body` is the raw markdown, and it is the field most easily forgotten: the
  * extracted sections were being redacted while the prose they came from was
- * passed through untouched, which leaked through `pb recent`.
+ * passed through untouched, which leaked through `statenest recent`.
  */
 /**
  * Scrub the free-text fields of a project record.
@@ -223,7 +223,7 @@ export function renderSessionContext(
 ): string {
   const limit = Math.min(options.maxChars ?? SESSION_CONTEXT_MAX_CHARS, HOOK_OUTPUT_MAX_CHARS);
   const { project } = brief;
-  const lines: string[] = ['# Project Brain', ''];
+  const lines: string[] = ['# StateNest', ''];
 
   lines.push(`Project: ${project.name}`);
   if (project.description) lines.push(`About: ${project.description}`);
@@ -260,7 +260,7 @@ export function renderSessionContext(
 
   lines.push(
     '',
-    'Use the project-brain MCP tools for more detail, or to record a checkpoint, decision or next action.',
+    'Use the statenest MCP tools for more detail, or to record a checkpoint, decision or next action.',
   );
 
   return capText(lines.join('\n'), limit);
@@ -274,7 +274,7 @@ export function renderSessionContext(
  */
 export function capText(text: string, maxChars: number): string {
   if (text.length <= maxChars) return text;
-  const notice = '\n\n[truncated - ask Project Brain for more]';
+  const notice = '\n\n[truncated - ask StateNest for more]';
   const budget = maxChars - notice.length;
   const cut = text.slice(0, Math.max(0, budget));
   const lastBreak = cut.lastIndexOf('\n');
@@ -295,7 +295,7 @@ export interface RecentEntry {
 }
 
 /**
- * The feed behind `pb recent`.
+ * The feed behind `statenest recent`.
  *
  * Checkpoints are preferred because they say *what* happened. A project with
  * no checkpoint still appears, with its recorded activity time and an honest

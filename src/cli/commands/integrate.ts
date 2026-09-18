@@ -11,7 +11,7 @@ import {
 import { contractHome } from '../../util/paths.js';
 
 /**
- * `pb integrate claude` wires Project Brain into Claude Code.
+ * `statenest integrate claude` wires StateNest into Claude Code.
  *
  * It does this entirely through Claude Code's own plugin CLI. The user's
  * `settings.json` is read but never written: plugin installation, hook
@@ -19,7 +19,7 @@ import { contractHome } from '../../util/paths.js';
  * hand-editing its config would make uninstalling messy and upgrades fragile.
  */
 export function integrateCommand(): Command {
-  const command = new Command('integrate').description('Connect Project Brain to a coding agent');
+  const command = new Command('integrate').description('Connect StateNest to a coding agent');
 
   command
     .command('claude')
@@ -56,9 +56,9 @@ export function integrateCommand(): Command {
         print(`  ${style.dim(result.message)}`);
         print('');
         print(style.dim('  In Claude Code you now have:'));
-        print(`    ${style.cyan('/project-brain:resume')}      pick a project back up`);
-        print(`    ${style.cyan('/project-brain:checkpoint')}  record what you just did`);
-        print(`    ${style.cyan('/project-brain:where')}       find a project's copies and servers`);
+        print(`    ${style.cyan('/statenest:resume')}      pick a project back up`);
+        print(`    ${style.cyan('/statenest:checkpoint')}  record what you just did`);
+        print(`    ${style.cyan('/statenest:where')}       find a project's copies and servers`);
         print('');
         print(
           style.dim(
@@ -100,7 +100,7 @@ export function integrateCommand(): Command {
       );
       if (!pluginEnabled && claudeInstalled) {
         print('');
-        print(bullet(style.cyan('pb integrate claude')));
+        print(bullet(style.cyan('statenest integrate claude')));
       }
       print('');
     });

@@ -26,12 +26,13 @@ import { exportCommand, importCommand } from './commands/export.js';
 import { uninstallCommand } from './commands/uninstall.js';
 import { migrateCommand } from './commands/migrate.js';
 import { profileCommand } from './commands/profile.js';
+import { CLI_COMMAND } from '../core/metadata.js';
 
 /**
- * The `pb` command tree.
+ * The `statenest` command tree.
  *
  * The naming rule throughout: commands answer questions a developer actually
- * asks out loud. `pb where taxi`, not `pb project lookup --field
+ * asks out loud. `statenest where taxi`, not `statenest project lookup --field
  * deployment.machine`. Anything that reads like a database query belongs
  * behind a flag, not in the command name.
  */
@@ -39,17 +40,17 @@ export function buildProgram(version: string): Command {
   const program = new Command();
 
   program
-    .name('pb')
+    .name(CLI_COMMAND)
     .description(
-      'Project Brain — remembers your projects, machines, deployments and where you left off.',
+      'StateNest — remembers your projects, machines, deployments and where you left off.',
     )
     .version(version, '-v, --version', 'print the version')
-    .option('--home <dir>', 'use a different Project Brain home')
+    .option('--home <dir>', 'use a different StateNest home')
     .option('--profile <name>', 'use a specific profile')
     .option('--json', 'machine-readable output')
     .option('-q, --quiet', 'suppress warnings')
     .addOption(new Option('--no-color', 'disable colored output'))
-    .showHelpAfterError('(run `pb --help` for a list of commands)')
+    .showHelpAfterError('(run `statenest --help` for a list of commands)')
     .showSuggestionAfterError(true)
     .configureHelp({ sortSubcommands: false })
     .hook('preAction', (thisCommand) => {
@@ -114,12 +115,12 @@ export function buildProgram(version: string): Command {
     'after',
     `
 ${style.bold('Examples')}
-  ${style.cyan('pb init')}                        set up and find your projects
-  ${style.cyan('pb recent')}                      what you have been working on
-  ${style.cyan('pb resume world-war')}            pick a project back up
-  ${style.cyan('pb where taxi')}                  every copy and deployment
-  ${style.cyan('pb checkpoint -m "..."')}         record what you just did
-  ${style.cyan('pb search "refinery"')}           search your own history
+  ${style.cyan('statenest init')}                        set up and find your projects
+  ${style.cyan('statenest recent')}                      what you have been working on
+  ${style.cyan('statenest resume world-war')}            pick a project back up
+  ${style.cyan('statenest where taxi')}                  every copy and deployment
+  ${style.cyan('statenest checkpoint -m "..."')}         record what you just did
+  ${style.cyan('statenest search "refinery"')}           search your own history
 
 ${style.dim('Everything is stored locally as YAML and Markdown. Nothing is uploaded.')}
 `,

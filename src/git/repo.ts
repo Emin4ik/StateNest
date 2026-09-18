@@ -320,7 +320,7 @@ async function resolveHead(
  * Approximate "when did a ref last move", from filesystem mtimes.
  *
  * This is a heuristic and is treated as one: it informs activity ordering, but
- * `pb` never presents it as an exact commit time.
+ * `statenest` never presents it as an exact commit time.
  */
 async function lastRefActivity(gitDir: string, commonGitDir: string): Promise<Timestamp | null> {
   const candidates = [

@@ -5,8 +5,8 @@ import { confirm } from '../../src/cli/prompt.js';
  * `--yes` has to mean yes.
  *
  * It used to mean "assume the default". Every prompt guarding something
- * destructive or outbound sensibly defaults to no, so `pb import --yes`,
- * `pb export --yes`, `pb add --yes` and `pb sync init --yes` all printed
+ * destructive or outbound sensibly defaults to no, so `statenest import --yes`,
+ * `statenest export --yes`, `statenest add --yes` and `statenest sync init --yes` all printed
  * "Cancelled. Nothing was changed." and exited 0 — the flag did the opposite of
  * what it said, silently, and succeeded while doing it.
  *

@@ -16,7 +16,7 @@ import { now } from '../../src/util/time.js';
 /**
  * Security regression tests.
  *
- * These encode the promises Project Brain makes to the user. Each one exists
+ * These encode the promises StateNest makes to the user. Each one exists
  * because breaking it silently would be worse than any functional bug: the
  * user would have no way to notice, and the damage would already be done.
  *
@@ -77,7 +77,7 @@ describe('security guarantees', () => {
     return { workspace, registry: new Registry(workspace.store) };
   }
 
-  /** Every byte Project Brain has written into its own home. */
+  /** Every byte StateNest has written into its own home. */
   async function allStoredText(workspace: Workspace): Promise<string> {
     const { readdir } = await import('node:fs/promises');
     const chunks: string[] = [];
@@ -183,7 +183,7 @@ describe('security guarantees', () => {
     });
   });
 
-  describe('3. a credential in Project Brain\'s own data blocks sync', () => {
+  describe('3. a credential in StateNest\'s own data blocks sync', () => {
     it('detects a key written into a checkpoint and reports it as blocking', async () => {
       const { workspace, registry } = await setup();
       await makeFakeRepo(join(code.path, 'app'), { remote: 'git@github.com:acme/app.git' });
@@ -259,7 +259,7 @@ describe('security guarantees', () => {
       expect(result.redactions).toBeGreaterThan(0);
       const written = await readFile(result.filePath, 'utf8');
       expect(written).not.toContain(FAKE_GITHUB_TOKEN);
-      expect(written).toContain('redacted by Project Brain');
+      expect(written).toContain('redacted by StateNest');
       // The rest of the sentence survives - redaction, not rejection.
       expect(written).toContain('from the CI config');
     });
@@ -348,7 +348,7 @@ describe('security guarantees', () => {
       await registry.register(project, { machineId: workspace.machineId });
 
       const files = await snapshotDir(project);
-      expect(files.some((file) => file.includes('.project-brain'))).toBe(false);
+      expect(files.some((file) => file.includes('.statenest'))).toBe(false);
       expect(files.some((file) => file.includes('pb.'))).toBe(false);
     });
   });

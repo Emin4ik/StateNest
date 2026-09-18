@@ -45,8 +45,8 @@ let cached: CommandContext | null = null;
  * Open the workspace for this invocation.
  *
  * Cached so that a command which needs the registry twice does not re-read
- * every project file. Commands that do not touch stored data (`pb --version`,
- * `pb doctor` on an uninitialised machine) never call this.
+ * every project file. Commands that do not touch stored data (`statenest --version`,
+ * `statenest doctor` on an uninitialised machine) never call this.
  */
 export async function openContext(overrides: OpenOptions = {}): Promise<CommandContext> {
   if (cached) return cached;
@@ -78,7 +78,7 @@ function reportLoadIssues(context: CommandContext): void {
   for (const issue of issues.slice(0, 3)) {
     warn(`${contractHome(issue.filePath)} could not be read (${issue.reason})`);
   }
-  if (issues.length > 3) warn(`${issues.length - 3} more files could not be read. Run: pb doctor`);
+  if (issues.length > 3) warn(`${issues.length - 3} more files could not be read. Run: statenest doctor`);
 }
 
 /**
@@ -88,5 +88,5 @@ function reportLoadIssues(context: CommandContext): void {
 export function reportLateIssues(context: CommandContext, alreadyReported = 0): void {
   const issues = context.workspace.store.getIssues().slice(alreadyReported);
   if (issues.length === 0 || globals.quiet || globals.json) return;
-  warn(`${issues.length} file(s) could not be read while running this command. Run: pb doctor`);
+  warn(`${issues.length} file(s) could not be read while running this command. Run: statenest doctor`);
 }

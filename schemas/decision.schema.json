@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN/blob/main/schemas/v1/decision.json",
-  "title": "Project Brain decision",
+  "$id": "https://github.com/Emin4ik/StateNest/blob/main/schemas/v1/decision.json",
+  "title": "StateNest decision",
   "description": "A decision and the reasoning behind it.",
   "type": "object",
   "properties": {

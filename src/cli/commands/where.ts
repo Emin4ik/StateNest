@@ -6,7 +6,7 @@ import { relativeTime } from '../../util/time.js';
 import type { Machine, Project, Remote } from '../../core/schema.js';
 
 /**
- * `pb where` answers one question completely: where does this project exist?
+ * `statenest where` answers one question completely: where does this project exist?
  *
  * Local copies on every machine, and every environment it is deployed to,
  * with the exact paths and ssh aliases needed to get there - the things a
@@ -31,7 +31,7 @@ export function whereCommand(): Command {
         (location) => location.machine_id === workspace.machineId,
       );
 
-      // `cd "$(pb where taxi --path-only)"` is the whole point of this flag,
+      // `cd "$(statenest where taxi --path-only)"` is the whole point of this flag,
       // so it prints one bare path and nothing else - no colour, no label.
       if (options.pathOnly) {
         const path = here[0]?.path;
@@ -67,7 +67,7 @@ async function render(
     print(style.dim('  No locations recorded yet.'));
     print('');
     print(style.dim('  Register where it lives:'));
-    print(`    ${style.cyan('pb add /path/to/project')}`);
+    print(`    ${style.cyan('statenest add /path/to/project')}`);
     print('');
     return;
   }

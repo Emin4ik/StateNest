@@ -8,13 +8,13 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * The Project Brain MCP server.
+ * The StateNest MCP server.
  *
- * This is how a coding agent reaches Project Brain without the user having to
+ * This is how a coding agent reaches StateNest without the user having to
  * remember CLI commands. It is read-mostly by design: the write tools record
  * memory (checkpoints, decisions, tasks, focus) and nothing else. There is no
  * tool that runs a shell command, connects to a server, or touches the user's
- * source repository - registering a VPS in Project Brain must never become a
+ * source repository - registering a VPS in StateNest must never become a
  * way for a model to reach it.
  *
  * Every tool returns compact text. An agent that needs more asks for more;
@@ -26,10 +26,10 @@ async function main(): Promise<void> {
   const version = await readPackageVersion(join(packageRoot, 'package.json'));
 
   const server = new McpServer(
-    { name: 'project-brain', version },
+    { name: 'statenest', version },
     {
       instructions: [
-        'Project Brain is the user\'s memory of their own projects: where each one lives,',
+        'StateNest is the user\'s memory of their own projects: where each one lives,',
         'which machines and servers it is on, what was done, decided, and left unfinished.',
         '',
         'Use it when the user refers to past work ("what was I doing", "where did I leave off",',
@@ -55,7 +55,7 @@ async function main(): Promise<void> {
  */
 main().catch((error: unknown) => {
   process.stderr.write(
-    `project-brain MCP server failed to start: ${error instanceof Error ? error.message : String(error)}\n`,
+    `statenest MCP server failed to start: ${error instanceof Error ? error.message : String(error)}\n`,
   );
   process.exit(1);
 });

@@ -46,7 +46,7 @@ guaranteed, and unbundled stack traces point at real source files.
 - SessionStart latency improved from p50 **211ms to 116ms**, and p90 from 209ms
   to 124ms — bundling removed module-resolution work as well as the failure.
 - `dist-plugin/` is a build artifact, gitignored and produced by `npm run build`.
-- `pb doctor` checks for the bundled entry points specifically, so a checkout
+- `statenest doctor` checks for the bundled entry points specifically, so a checkout
   that was never built reports *"Plugin build: compiled output missing"* with
   the command to fix it, rather than installing a plugin that silently does
   nothing.

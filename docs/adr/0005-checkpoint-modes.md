@@ -6,7 +6,7 @@ model is already in context
 ## Context
 
 A good checkpoint is prose: what changed, why it mattered, what is still
-broken. Generating prose needs a model. The brief requires that Project Brain
+broken. Generating prose needs a model. The brief requires that StateNest
 not depend on a paid API, and that it be honest about any cost it does incur.
 
 Research settled the options empirically:
@@ -28,10 +28,10 @@ Default mode is `manual-smart`:
 | --- | --- | --- |
 | `SessionEnd` | Metadata: branch, commit, dirtiness, file counts | none |
 | `PostCompact` | Rich, from the free `compact_summary` | none |
-| `/project-brain:checkpoint` or MCP tool | Rich, written by the agent already in context | none extra |
-| `pb checkpoint -m "…"` | Rich, written by the user | none |
+| `/statenest:checkpoint` or MCP tool | Rich, written by the agent already in context | none extra |
+| `statenest checkpoint -m "…"` | Rich, written by the user | none |
 
-Project Brain never spawns a model. Every rich checkpoint reuses work that has
+StateNest never spawns a model. Every rich checkpoint reuses work that has
 already been done and paid for.
 
 Metadata-only summaries say only what was observed — "automatic checkpoint on

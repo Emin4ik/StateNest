@@ -28,7 +28,7 @@ export function scanCommand(): Command {
         print('');
         print('Name the directories your projects live in:');
         print('');
-        print(bullet(style.cyan('pb scan ~/Projects ~/Work --save-roots')));
+        print(bullet(style.cyan('statenest scan ~/Projects ~/Work --save-roots')));
         return;
       }
 
@@ -196,8 +196,8 @@ function renderHumanReport(report: ScanReport, targets: string[], options: ScanO
 
   print('');
   print(style.dim('Next:'));
-  print(bullet(style.cyan('pb projects')));
-  print(bullet(style.cyan('pb recent')));
+  print(bullet(style.cyan('statenest projects')));
+  print(bullet(style.cyan('statenest recent')));
 }
 
 /**

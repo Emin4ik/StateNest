@@ -19,7 +19,7 @@ import type { Project } from '../../core/schema.js';
 export function projectsCommand(): Command {
   return new Command('projects')
     .alias('ls')
-    .description('List every project Project Brain knows about')
+    .description('List every project StateNest knows about')
     .option('--active', 'only projects with status "active"')
     .option('--paused', 'only projects with status "paused"')
     .option('--archived', 'only projects with status "archived"')
@@ -36,7 +36,7 @@ export function projectsCommand(): Command {
       const machines = await workspace.store.listMachines();
       const machineNames = new Map(machines.map((machine) => [machine.id, machine.name]));
 
-      // `--stale` carries a default so `pb projects --stale` works without an
+      // `--stale` carries a default so `statenest projects --stale` works without an
       // argument, which means its presence must be read from the option source
       // rather than its value - otherwise every listing filters by staleness.
       const staleRequested = command.getOptionValueSource('stale') === 'cli';
@@ -193,7 +193,7 @@ function projectColumns(
  * Where a project lives, in one short phrase.
  *
  * "local + 2 machines + prod" is more useful at a glance than a list of paths,
- * which `pb where` shows in full when the user actually wants them.
+ * which `statenest where` shows in full when the user actually wants them.
  */
 export function describeWhere(
   project: Project,
@@ -262,10 +262,10 @@ function printEmptyState(totalKnown: number, options: ProjectFilters): void {
   if (totalKnown === 0) {
     heading('No projects registered yet.');
     print('');
-    print('Project Brain finds projects by scanning directories you name:');
+    print('StateNest finds projects by scanning directories you name:');
     print('');
-    print(bullet(style.cyan('pb scan ~/Projects ~/Work')));
-    print(bullet(style.cyan('pb add .') + style.dim('   (register the current directory)')));
+    print(bullet(style.cyan('statenest scan ~/Projects ~/Work')));
+    print(bullet(style.cyan('statenest add .') + style.dim('   (register the current directory)')));
     return;
   }
 

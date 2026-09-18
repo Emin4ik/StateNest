@@ -178,7 +178,7 @@ describe('dashboard', () => {
 
     it('serves a self-contained page that loads nothing remote', async () => {
       const html = await (await fetch(url('/'))).text();
-      expect(html).toContain('Project Brain');
+      expect(html).toContain('StateNest');
       expect(html).not.toMatch(/<script[^>]+src=/i);
       expect(html).not.toMatch(/<link[^>]+href="https?:/i);
       // Values from the API are inserted as text, never parsed as markup.

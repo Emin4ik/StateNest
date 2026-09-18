@@ -6,9 +6,9 @@ import { errnoCode } from '../util/errors.js';
 import type { ProfilePaths } from '../core/paths.js';
 
 /**
- * Auditing Project Brain's own data.
+ * Auditing StateNest's own data.
  *
- * This scans what Project Brain wrote, not the user's source code. The
+ * This scans what StateNest wrote, not the user's source code. The
  * distinction matters: the promise made to the user is that *this tool* never
  * stores their secrets, and this is how that promise is checked. Auditing
  * their repositories would be a different product.
@@ -52,7 +52,7 @@ const SCANNABLE_EXTENSIONS = new Set(['.md', '.yaml', '.yml', '.json', '.txt']);
 /**
  * Scan a profile's data directory.
  *
- * Everything Project Brain persists is small text, so a full read of the whole
+ * Everything StateNest persists is small text, so a full read of the whole
  * profile is fast enough to run before every sync rather than sampling.
  */
 export async function auditProfile(paths: ProfilePaths): Promise<AuditResult> {

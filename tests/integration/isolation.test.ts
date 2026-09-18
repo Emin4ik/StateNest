@@ -21,7 +21,7 @@ describe('test isolation', () => {
     expect(home.startsWith(realpathSync(tmpdir()))).toBe(true);
   });
 
-  it('defaults PROJECT_BRAIN_HOME into the sandbox, not a real home', () => {
+  it('defaults STATENEST_HOME into the sandbox, not a real home', () => {
     const resolved = resolveBrainHome();
     expect(resolved.startsWith(realpathSync(tmpdir()))).toBe(true);
     expect(createPaths().home.startsWith(realpathSync(tmpdir()))).toBe(true);
@@ -42,7 +42,7 @@ describe('test isolation', () => {
   describe('the write guard actually blocks', () => {
     it('rejects a path outside the allowed roots', () => {
       // A path that is absolute, plausible, and emphatically not in the sandbox.
-      expect(() => assertWritable('/etc/project-brain-should-never-write-here')).toThrow(
+      expect(() => assertWritable('/etc/statenest-should-never-write-here')).toThrow(
         /Refusing to write outside the allowed root/,
       );
     });
@@ -50,7 +50,7 @@ describe('test isolation', () => {
     it('rejects a write to a real home path', async () => {
       // This is the exact accident the guard exists to prevent: code that
       // resolved a path from the *real* home and tried to write there.
-      const dangerous = join('/Users', 'someone', '.project-brain', 'config.yaml');
+      const dangerous = join('/Users', 'someone', '.statenest', 'config.yaml');
       await expect(writeFileAtomic(dangerous, 'nope')).rejects.toThrow(
         /Refusing to write outside the allowed root/,
       );

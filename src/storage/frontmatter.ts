@@ -5,8 +5,8 @@ import { serializeYaml } from './yaml-file.js';
  * Markdown files with YAML frontmatter.
  *
  * Checkpoints and project state are stored this way rather than as pure data
- * because a developer must be able to open `~/.project-brain` and read their
- * own memory without Project Brain installed. The frontmatter is what queries
+ * because a developer must be able to open `~/.statenest` and read their
+ * own memory without StateNest installed. The frontmatter is what queries
  * run against; the prose below it is what a human actually reads six months
  * later.
  */

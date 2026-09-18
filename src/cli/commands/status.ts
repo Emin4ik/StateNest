@@ -8,7 +8,7 @@ import { contractHome } from '../../util/paths.js';
 import type { Project } from '../../core/schema.js';
 
 /**
- * `pb status` is the "where do things stand" overview.
+ * `statenest status` is the "where do things stand" overview.
  *
  * It answers the questions a developer asks on a Monday morning: what is
  * active, what is blocked, what did I leave uncommitted, and what have I not
@@ -70,10 +70,10 @@ export function statusCommand(): Command {
       if (projects.length === 0) {
         heading('Nothing tracked yet.');
         print('');
-        print(style.dim('  Project Brain finds projects by scanning directories you name:'));
+        print(style.dim('  StateNest finds projects by scanning directories you name:'));
         print('');
-        print(`    ${style.cyan('pb scan ~/Projects ~/Work')}`);
-        print(`    ${style.cyan('pb add .')}                   ${style.dim('register the current directory')}`);
+        print(`    ${style.cyan('statenest scan ~/Projects ~/Work')}`);
+        print(`    ${style.cyan('statenest add .')}                   ${style.dim('register the current directory')}`);
         print('');
         print(style.dim(`  profile: ${workspace.profile.name}  ·  ${contractHome(workspace.paths.home)}`));
         print('');
@@ -121,7 +121,7 @@ export function statusCommand(): Command {
         }
         if (stale.length > 8) print(style.dim(`    ... and ${stale.length - 8} more`));
         print('');
-        print(style.dim(`  pb projects --stale ${staleDays}   to review them`));
+        print(style.dim(`  statenest projects --stale ${staleDays}   to review them`));
       }
 
       // A status report with nothing to report should say so, and point
@@ -130,8 +130,8 @@ export function statusCommand(): Command {
         print('');
         print(`  ${style.green('Nothing needs attention.')}`);
         print('');
-        print(style.dim('  pb recent    what you have been working on'));
-        print(style.dim('  pb projects  everything Project Brain knows about'));
+        print(style.dim('  statenest recent    what you have been working on'));
+        print(style.dim('  statenest projects  everything StateNest knows about'));
       }
 
       print('');
@@ -155,7 +155,7 @@ interface DirtyEntry {
  *
  * Working-tree dirtiness genuinely cannot be determined without git, so this
  * pays for a real `git status` per local copy - but with bounded concurrency
- * and a short timeout, because `pb status` across fifty repositories would
+ * and a short timeout, because `statenest status` across fifty repositories would
  * otherwise spawn fifty git processes at once.
  *
  * Unreadable or missing paths are skipped rather than reported as clean: an

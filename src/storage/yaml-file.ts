@@ -9,7 +9,7 @@ import { contractHome } from '../util/paths.js';
  * Reading a record that could not be parsed.
  *
  * A malformed file is reported, never deleted and never silently skipped in a
- * way that makes data look absent. `pb doctor` collects these; the rest of the
+ * way that makes data look absent. `statenest doctor` collects these; the rest of the
  * tool keeps working around them.
  */
 export interface LoadIssue {
@@ -39,14 +39,14 @@ export function serializeYaml(value: unknown): string {
  * Read and validate a YAML record.
  *
  * Returns an issue rather than throwing so that one corrupt project file
- * cannot make `pb projects` fail for the other forty-nine.
+ * cannot make `statenest projects` fail for the other forty-nine.
  */
 export async function readYamlFile<S extends z.ZodType>(
   filePath: string,
   schema: S,
   /**
-   * When given, a record written by an older Project Brain is migrated forward
-   * in memory before validation. Nothing is written back here - `pb migrate`
+   * When given, a record written by an older StateNest is migrated forward
+   * in memory before validation. Nothing is written back here - `statenest migrate`
    * does that, after taking a backup.
    */
   kind?: RecordKind,
@@ -92,7 +92,7 @@ export async function readYamlFileOrThrow<S extends z.ZodType>(
   if (issue) {
     throw new BrainError('CORRUPT_FILE', `Could not read ${contractHome(filePath)}`, {
       details: [issue.reason],
-      hints: ['pb doctor --repair', `Inspect the file directly: ${contractHome(filePath)}`],
+      hints: ['statenest doctor --repair', `Inspect the file directly: ${contractHome(filePath)}`],
     });
   }
   if (value === null) {
@@ -102,8 +102,8 @@ export async function readYamlFileOrThrow<S extends z.ZodType>(
 }
 
 /**
- * Validate before writing, so a bug in Project Brain cannot persist a record
- * that Project Brain will later refuse to read.
+ * Validate before writing, so a bug in StateNest cannot persist a record
+ * that StateNest will later refuse to read.
  */
 export async function writeYamlFile<S extends z.ZodType>(
   filePath: string,
@@ -117,7 +117,7 @@ export async function writeYamlFile<S extends z.ZodType>(
       `Refusing to write an invalid record to ${contractHome(filePath)}`,
       {
         details: [describeZod(result.error)],
-        hints: ['This is a bug in Project Brain - please report it with this message.'],
+        hints: ['This is a bug in StateNest - please report it with this message.'],
       },
     );
   }

@@ -24,7 +24,7 @@ export function dashboardCommand(): Command {
       });
 
       print('');
-      heading('Project Brain dashboard');
+      heading('StateNest dashboard');
       print('');
       print(`  ${style.cyan(running.url)}`);
       print(`  ${style.dim(`profile: ${workspace.profile.name}  ·  ${contractHome(workspace.paths.home)}`)}`);

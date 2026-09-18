@@ -8,7 +8,7 @@ const execFileAsync = promisify(execFile);
 /**
  * Archive safety.
  *
- * `pb import` extracts an archive the user may have been handed by someone
+ * `statenest import` extracts an archive the user may have been handed by someone
  * else. A tar entry whose path escapes the extraction directory - the classic
  * "Zip Slip" - would let that archive write anywhere the user can write.
  *
@@ -20,8 +20,8 @@ const execFileAsync = promisify(execFile);
  *
  * So every member is validated before anything is extracted, and the archive
  * is rejected as a whole if any member is unsafe. Rejecting is right here:
- * a Project Brain backup containing a path traversal is not a backup with one
- * bad file in it, it is not a Project Brain backup.
+ * a StateNest backup containing a path traversal is not a backup with one
+ * bad file in it, it is not a StateNest backup.
  */
 
 export interface ArchiveMember {
@@ -78,7 +78,7 @@ export class TarUnavailableError extends BrainError {
       ],
       hints: [
         'On Windows: update to a recent Windows 10/11, or install tar (for example via Git for Windows).',
-        'Everything else in Project Brain works without it.',
+        'Everything else in StateNest works without it.',
       ],
     });
   }
@@ -102,7 +102,7 @@ export async function inspectArchive(archivePath: string): Promise<ArchiveInspec
     if (isMissingTar(error)) throw new TarUnavailableError();
     throw new BrainError('ARCHIVE_UNREADABLE', 'Could not read the archive.', {
       details: [firstLine((error as { stderr?: string }).stderr ?? String(error))],
-      hints: ['Check that the file is a gzipped tar archive created by `pb export`.'],
+      hints: ['Check that the file is a gzipped tar archive created by `statenest export`.'],
     });
   }
 
@@ -124,9 +124,9 @@ export async function inspectArchive(archivePath: string): Promise<ArchiveInspec
     }
 
     if (parsed.linkTarget !== null) {
-      // Project Brain never writes a symlink, so one here is either a mistake
+      // StateNest never writes a symlink, so one here is either a mistake
       // or an attempt to redirect a later write out of the directory.
-      problems.push(`"${parsed.path}" is a link, which a Project Brain archive never contains`);
+      problems.push(`"${parsed.path}" is a link, which a StateNest archive never contains`);
     }
   }
 
@@ -152,8 +152,8 @@ export async function extractArchiveSafely(
     throw new BrainError('UNSAFE_ARCHIVE', 'Refusing to extract this archive.', {
       details: inspection.problems.slice(0, 8),
       hints: [
-        'A Project Brain backup contains only plain files under a single directory.',
-        'If you created this archive yourself, re-create it with: pb export',
+        'A StateNest backup contains only plain files under a single directory.',
+        'If you created this archive yourself, re-create it with: statenest export',
       ],
     });
   }

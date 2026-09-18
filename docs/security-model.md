@@ -1,6 +1,6 @@
 # Security model
 
-Project Brain reads your home directory and writes a file tree you may sync to
+StateNest reads your home directory and writes a file tree you may sync to
 a git repository. That deserves a precise account of what it does, what it
 refuses to do, and where the limits are.
 
@@ -40,7 +40,7 @@ opened**, not after it is read.
 
 ## What it stores
 
-Under `~/.project-brain`, as YAML and Markdown you can read, grep and edit:
+Under `~/.statenest`, as YAML and Markdown you can read, grep and edit:
 
 | Stored | Example |
 | --- | --- |
@@ -70,13 +70,13 @@ layer. A file whose name matches is never read.
 **2. Schema shape.** There is nowhere to put a secret even if one were
 obtained.
 
-**3. Content scanning, before writing.** Everything Project Brain is about to
+**3. Content scanning, before writing.** Everything StateNest is about to
 persist — checkpoint summaries, decisions, project notes, task text — passes
 through `redactSecrets` first. A match is replaced with
-`[redacted by Project Brain]` and the surrounding prose is kept.
+`[redacted by StateNest]` and the surrounding prose is kept.
 
 Redaction is right when *writing* (a checkpoint with a token removed is still a
-useful checkpoint). **Blocking** is right when *sending*: `pb sync` runs a full
+useful checkpoint). **Blocking** is right when *sending*: `statenest sync` runs a full
 audit first and refuses to push if anything is found, before creating a commit
 — because once a credential is in git history, removing it means rewriting
 history, and it may already have been pushed.
@@ -94,11 +94,11 @@ and values assigned to secret-looking names that also pass an entropy check.
 - A credential format the ruleset does not know about
 - A secret that looks like ordinary prose — a passphrase, a memorable password
 - A secret split across lines or otherwise obfuscated
-- An internal hostname or IP you consider sensitive. Project Brain stores those
+- An internal hostname or IP you consider sensitive. StateNest stores those
   on purpose; that is the product. Use a separate profile for anything you do
   not want in your synced data.
 
-The ruleset is deliberately small and precise rather than broad. Project Brain
+The ruleset is deliberately small and precise rather than broad. StateNest
 scans its own short prose output, not arbitrary source trees, and in that
 context a rule that fires on a real token is worth far more than one that cries
 wolf on every base64 string until the user learns to ignore it.
@@ -109,8 +109,8 @@ two that do not depend on pattern matching at all.
 ## Profiles
 
 ```
-~/.project-brain/profiles/personal/   its own git repo, its own remote
-~/.project-brain/profiles/work/       a different repo, a different remote
+~/.statenest/profiles/personal/   its own git repo, its own remote
+~/.statenest/profiles/work/       a different repo, a different remote
 ```
 
 A work project cannot reach a personal repository because sync operates on one
@@ -124,12 +124,12 @@ profile and is never syncable.
 
 ## Your source repositories are read-only
 
-Project Brain **observes** your repositories. It never runs `git add`,
+StateNest **observes** your repositories. It never runs `git add`,
 `git commit`, `git push` or any other write against one. The only repository it
-ever writes to is its own data repository, inside `~/.project-brain`.
+ever writes to is its own data repository, inside `~/.statenest`.
 
 This is enforced in three ways: every git write lives in `src/sync/`, which
-asserts its working directory is inside the Project Brain home before *every*
+asserts its working directory is inside the StateNest home before *every*
 invocation; the CLI has no command that writes to a project; and a test
 registers a repository, checkpoints it, syncs, and asserts the repository's
 HEAD and every file are byte-identical afterwards.
@@ -137,12 +137,12 @@ HEAD and every file are byte-identical afterwards.
 ## The Claude Code integration
 
 - Hooks run as your user, with your permissions. They read git state and write
-  only inside `~/.project-brain`.
+  only inside `~/.statenest`.
 - The MCP server is **read-mostly**. Its write tools record memory — a
   checkpoint, a decision, a task, a focus line. There is no tool that runs a
   shell command or connects to anything.
-- **Registering a server in Project Brain does not give a model a way to reach
-  it.** There is no ssh execution tool, by deliberate omission. Project Brain
+- **Registering a server in StateNest does not give a model a way to reach
+  it.** There is no ssh execution tool, by deliberate omission. StateNest
   is a memory and control plane, not an infrastructure executor.
 - No model is ever spawned. Rich checkpoints reuse work an agent has already
   done; `PostCompact` uses a summary Claude Code generated anyway.
@@ -163,7 +163,7 @@ run the dashboard on a shared machine.
 ## Sync
 
 - Optional. Off by default. Everything works forever without it.
-- To a repository **you** own. `pb sync init` warns, twice, that it must be
+- To a repository **you** own. `statenest sync init` warns, twice, that it must be
   private.
 - Audited before every push, blocking on any finding.
 - Never destructive: a conflict stops and tells you which files to resolve.
@@ -180,7 +180,7 @@ config key exists solely so it can be `false`, and the schema rejects `true`.
 | --- | --- |
 | A credential ends up in synced git history | Deny-list, no schema field, redaction on write, blocking audit before commit |
 | Work data reaches a personal repository | Profiles are separate directory trees; sync cannot leave one |
-| Project Brain damages a repository | It never writes to one; asserted per-invocation and tested |
+| StateNest damages a repository | It never writes to one; asserted per-invocation and tested |
 | A model reaches a registered server | No execution tool exists |
 | Someone on the network reads the dashboard | Loopback-only unless explicitly overridden |
 | A malicious path or branch name injects a command | `execFile` with argument arrays; no shell anywhere |
@@ -188,7 +188,7 @@ config key exists solely so it can be `false`, and the schema rejects `true`.
 | A crash corrupts the registry | Atomic writes; unreadable files are reported, never deleted |
 | A hook hangs the coding agent | Every handler has a deadline; the hook always exits 0 |
 
-**Out of scope.** Project Brain does not defend against an attacker who already
+**Out of scope.** StateNest does not defend against an attacker who already
 has write access to your home directory. At that point they have your ssh keys.
 
 ## Reporting

@@ -167,6 +167,52 @@ for (const file of TEXT_FILES) {
   }
 }
 
+// --- legacy identity tokens anywhere in shipped files -----------------------
+/**
+ * Names this project used to answer to, which must not survive a rename.
+ *
+ * The previous check only flagged a github.com URL whose repository segment
+ * already matched the current name, so `OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN` was
+ * invisible to it — a stale URL pointing somewhere else entirely is exactly the
+ * case worth catching.
+ *
+ * docs/research/ is exempt: those files exist to record why the old names were
+ * abandoned, so naming them there is the point.
+ */
+const LEGACY_TOKENS = ['OWNER-NOT-CHOSEN', 'REPO-NOT-CHOSEN', 'project-brain', 'Project Brain'];
+const LEGACY_EXEMPT = [/^docs\/research\//, /^CHANGELOG\.md$/];
+
+const SHIPPED_TEXT = [
+  'README.md',
+  'CONTRIBUTING.md',
+  'SECURITY.md',
+  'CHANGELOG.md',
+  '.claude-plugin/plugin.json',
+  '.claude-plugin/marketplace.json',
+  '.mcp.json',
+  'hooks/hooks.json',
+];
+
+function checkLegacy(file) {
+  if (LEGACY_EXEMPT.some((pattern) => pattern.test(file))) return;
+  const contents = read(file);
+  if (!contents) return;
+
+  // The pre-rename data directory has to be spelled out somewhere for
+  // StateNest to recognise it and tell the user to move it. Tying the
+  // exemption to that constant keeps it narrow: only the compatibility path
+  // may name the old directory, and only while that path still exists.
+  if (contents.includes('LEGACY_HOME_DIR_NAME')) return;
+
+  for (const token of LEGACY_TOKENS) {
+    if (contents.includes(token)) {
+      problems.push(`${file} still contains the former identity "${token}"`);
+    }
+  }
+}
+
+for (const file of SHIPPED_TEXT) checkLegacy(file);
+
 // --- hardcoded install instructions in source -------------------------------
 // Seven user-facing messages told people to run `npm install -g project-brain`.
 // A hardcoded package name in a fix hint sends users to whoever owns that name.
@@ -174,7 +220,7 @@ function walkSource(dir, visit) {
   for (const entry of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
     const rel = `${dir}/${entry.name}`;
     if (entry.isDirectory()) walkSource(rel, visit);
-    else if (entry.name.endsWith('.ts')) visit(rel);
+    else if (/\.(ts|md|json)$/.test(entry.name)) visit(rel);
   }
 }
 
@@ -187,9 +233,16 @@ try {
     for (const match of contents.matchAll(/npm install -g ([\w@/-]+)/g)) {
       problems.push(`${file} hardcodes \`${match[0]}\` instead of using INSTALL_COMMAND`);
     }
+    checkLegacy(file);
   });
 } catch {
   notes.push('could not scan src/ for hardcoded install commands');
+}
+
+try {
+  walkSource('skills', checkLegacy);
+} catch {
+  notes.push('could not scan skills/ for former identity names');
 }
 
 // --- report -----------------------------------------------------------------

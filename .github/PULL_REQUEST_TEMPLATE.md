@@ -18,7 +18,7 @@
 ## If this touches data, privacy or the user's repositories
 
 - [ ] Nothing new is written into a user's source repository
-- [ ] Nothing new can reach a file Project Brain persists without passing the
+- [ ] Nothing new can reach a file StateNest persists without passing the
       secret scanner
 - [ ] Profile isolation is unaffected
 - [ ] Existing data written by an older version still loads

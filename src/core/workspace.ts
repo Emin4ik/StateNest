@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
   ConfigSchema,
   LocalMachineIdentitySchema,
@@ -9,7 +10,7 @@ import {
   type Machine,
   type Profile,
 } from './schema.js';
-import { createPaths, type BrainPaths, type ProfilePaths } from './paths.js';
+import { legacyHomeDir, createPaths, type BrainPaths, type ProfilePaths } from './paths.js';
 import { Store } from '../storage/store.js';
 import { readYamlFile, writeYamlFile } from '../storage/yaml-file.js';
 import { ensureDir, pathExists, readFileOrNull, writeFileAtomic } from '../util/fs-atomic.js';
@@ -18,10 +19,10 @@ import { contractHome } from '../util/paths.js';
 import { describeThisMachine, newMachineId, suggestMachineName } from '../machines/identity.js';
 import { now } from '../util/time.js';
 
-export const PROFILE_ENV_VAR = 'PROJECT_BRAIN_PROFILE';
+export const PROFILE_ENV_VAR = 'STATENEST_PROFILE';
 
 export interface OpenOptions {
-  /** Override the Project Brain home. Used by tests and by `--home`. */
+  /** Override the StateNest home. Used by tests and by `--home`. */
   home?: string;
   /** Override the active profile. Used by `--profile`. */
   profile?: string;
@@ -29,7 +30,7 @@ export interface OpenOptions {
 }
 
 /**
- * An opened Project Brain home, bound to one active profile.
+ * An opened StateNest home, bound to one active profile.
  *
  * Everything the rest of the code needs hangs off this: the resolved paths,
  * the config, the active profile, a store scoped to that profile, and this
@@ -55,9 +56,26 @@ export class Workspace {
     const paths = createPaths(options.home, env);
 
     if (!(await pathExists(paths.configFile))) {
-      throw new BrainError('NOT_INITIALIZED', 'Project Brain is not set up on this machine yet.', {
-        details: [`Expected to find ${contractHome(paths.configFile)}`],
-        hints: ['pb init'],
+      // Before the project had a name it wrote to LEGACY_HOME_DIR_NAME.
+      // Nobody outside this repository ever had data there, but pointing at it
+      // beats telling the one person who does that their history is gone.
+      const legacy = legacyHomeDir(env);
+      const hasLegacy = await pathExists(join(legacy, 'config.yaml'));
+
+      throw new BrainError('NOT_INITIALIZED', 'StateNest is not set up on this machine yet.', {
+        details: [
+          `Expected to find ${contractHome(paths.configFile)}`,
+          ...(hasLegacy
+            ? [
+                '',
+                `Found data from the previous name at ${contractHome(legacy)}.`,
+                'It has not been read or changed.',
+              ]
+            : []),
+        ],
+        hints: hasLegacy
+          ? [`mv ${contractHome(legacy)} ${contractHome(paths.home)}`, 'statenest doctor']
+          : ['statenest init'],
       });
     }
 
@@ -74,7 +92,7 @@ export class Workspace {
           available.length > 0
             ? [`Available profiles: ${available.join(', ')}`]
             : ['No profiles exist yet.'],
-        hints: ['pb profile list', `pb profile create ${profileName}`],
+        hints: ['statenest profile list', `statenest profile create ${profileName}`],
       });
     }
 
@@ -86,7 +104,7 @@ export class Workspace {
    * Create the home directory and a first profile.
    *
    * Safe to call on an already-initialised home: existing config and profiles
-   * are read rather than overwritten, so `pb init` can be re-run to add a
+   * are read rather than overwritten, so `statenest init` can be re-run to add a
    * profile or repair a partially-created layout without losing anything.
    */
   static async initialize(
@@ -177,7 +195,7 @@ export async function readConfig(paths: BrainPaths): Promise<Config> {
     throw new BrainError('CORRUPT_CONFIG', `Could not read ${contractHome(paths.configFile)}`, {
       details: [issue.reason],
       hints: [
-        'Fix the file by hand, or move it aside and run: pb init',
+        'Fix the file by hand, or move it aside and run: statenest init',
         'Your projects and checkpoints are stored separately and are not affected.',
       ],
     });
@@ -245,7 +263,7 @@ export async function readOrCreateMachineId(paths: BrainPaths): Promise<string> 
  */
 export async function writeDataRepoScaffolding(profilePaths: ProfilePaths): Promise<void> {
   const gitattributes = [
-    '# Project Brain data repository',
+    '# StateNest data repository',
     '#',
     '# Checkpoints are immutable, one file each, so they never conflict.',
     '# Decisions are append-only: keep both sides rather than conflicting.',
@@ -270,7 +288,7 @@ export async function writeDataRepoScaffolding(profilePaths: ProfilePaths): Prom
   ].join('\n');
 
   const readme = [
-    '# Project Brain data',
+    '# StateNest data',
     '',
     'This directory is your own developer memory. It is plain YAML and Markdown',
     'on purpose: you can read, grep, edit and diff all of it without Project',
@@ -303,7 +321,7 @@ async function writeIfAbsent(filePath: string, contents: string): Promise<void> 
   await writeFileAtomic(filePath, contents);
 }
 
-/** Read this package's version, for `pb --version` and `pb doctor`. */
+/** Read this package's version, for `statenest --version` and `statenest doctor`. */
 export async function readPackageVersion(packageJsonPath: string): Promise<string> {
   try {
     const raw = await readFile(packageJsonPath, 'utf8');

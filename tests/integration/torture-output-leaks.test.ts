@@ -12,7 +12,7 @@ import { makeFakeRepo, makeTempDir, type TempDir } from '../helpers/fixtures.js'
 /**
  * Secrets that are already on disk.
  *
- * The write path scrubs everything Project Brain persists, but that only
+ * The write path scrubs everything StateNest persists, but that only
  * protects data *this build* wrote. Text reaches `state.md`, a project record
  * or a checkpoint other ways: a hand edit, a sync from a machine running an
  * older version, or a build predating the scanner.
@@ -189,13 +189,13 @@ describe('a secret already on disk never reaches an output', () => {
     });
 
     expect(brief.currentFocus).toContain('rotating');
-    expect(brief.currentFocus).toContain('redacted by Project Brain');
+    expect(brief.currentFocus).toContain('redacted by StateNest');
     expect(brief.checkpoints[0]?.summary).toContain('Deployed using');
   });
 
   it('leaves the original file on disk untouched', async () => {
     // Redaction on read must not rewrite the user's data behind their back:
-    // `pb privacy audit` has to still be able to find and report it.
+    // `statenest privacy audit` has to still be able to find and report it.
     const { readFile } = await import('node:fs/promises');
     const state = await readFile(workspace.profilePaths.stateFile(projectId), 'utf8');
     expect(state).toContain(TOKEN);

@@ -21,7 +21,7 @@ export interface RedactionResult {
   findings: SecretFinding[];
 }
 
-export const REDACTION_PLACEHOLDER = '[redacted by Project Brain]';
+export const REDACTION_PLACEHOLDER = '[redacted by StateNest]';
 
 /**
  * Find secrets in text without modifying it.
@@ -70,7 +70,7 @@ export function detectSecrets(text: string): SecretFinding[] {
 /**
  * Replace anything that looks like a secret with a placeholder.
  *
- * Used on every piece of text Project Brain is about to persist. Redaction is
+ * Used on every piece of text StateNest is about to persist. Redaction is
  * preferred to rejection here: a checkpoint whose summary mentions a token is
  * still a useful checkpoint once the token is gone, and refusing to save it
  * would cost the user their session notes over one bad substring.

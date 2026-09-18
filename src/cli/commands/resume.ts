@@ -202,7 +202,7 @@ function render(
     }
   } else {
     print('');
-    print(style.dim('  No checkpoints yet. Run `pb checkpoint` after your next session.'));
+    print(style.dim('  No checkpoints yet. Run `statenest checkpoint` after your next session.'));
   }
 
   print('');

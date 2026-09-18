@@ -101,8 +101,8 @@ export const ALWAYS_EXCLUDED_DIRS: ReadonlySet<string> = new Set([
   '.sdkman',
   '.nix-profile',
 
-  // Project Brain's own data
-  '.project-brain',
+  // StateNest's own data
+  '.statenest',
 ]);
 
 /**
@@ -170,7 +170,7 @@ export const PROJECT_MARKERS: ReadonlyArray<{ file: string; type: string }> = [
 ];
 
 /**
- * Filenames whose *contents* are never read by Project Brain.
+ * Filenames whose *contents* are never read by StateNest.
  *
  * The scanner reads a small number of files to work out what a project is
  * (package.json, README titles). This list is the hard boundary on that: a
@@ -205,7 +205,7 @@ export const SECRET_FILENAME_PATTERNS: readonly RegExp[] = [
 ];
 
 /**
- * True when a file must never be opened by Project Brain.
+ * True when a file must never be opened by StateNest.
  *
  * Filename matching alone is not sufficient protection - the output scanner in
  * src/security handles the rest - but it is the cheapest layer and it stops

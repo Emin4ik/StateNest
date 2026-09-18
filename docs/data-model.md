@@ -1,7 +1,7 @@
 # Data model
 
-Everything Project Brain knows lives under `~/.project-brain` as YAML and
-Markdown. You can read it, grep it, edit it and diff it without Project Brain
+Everything StateNest knows lives under `~/.statenest` as YAML and
+Markdown. You can read it, grep it, edit it and diff it without StateNest
 installed — that is a design goal, not a side effect.
 
 JSON Schemas for every record are published in [`schemas/`](../schemas/),
@@ -10,7 +10,7 @@ generated from the same definitions the code validates against.
 ## Layout
 
 ```
-~/.project-brain/
+~/.statenest/
   config.yaml                  global settings
   machine.json                 THIS computer's id — outside every profile,
                                so it can never reach a data repository
@@ -103,7 +103,7 @@ blockers:
   - AI fails to rebuild a destroyed refinery
 ```
 
-**Status is always yours.** Project Brain never archives a project because time
+**Status is always yours.** StateNest never archives a project because time
 passed; it reports recency separately ("active, last touched 42 days ago") and
 lets you decide.
 
@@ -209,7 +209,7 @@ resolution than "when did I last touch this" needs.
 ## Schema versions
 
 Every record carries `schema_version`. Every schema is a **loose** object:
-fields written by a newer version of Project Brain are preserved, not stripped.
+fields written by a newer version of StateNest are preserved, not stripped.
 An older machine syncing the same data cannot silently drop what a newer one
 wrote.
 
@@ -226,5 +226,5 @@ validation. Two rules:
 2. **Do not edit old checkpoints.** They are history, and other machines may
    already have them.
 
-If a file becomes unparseable, Project Brain reports it and keeps working with
+If a file becomes unparseable, StateNest reports it and keeps working with
 everything else. It never deletes a file it could not read.

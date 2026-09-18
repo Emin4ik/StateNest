@@ -20,7 +20,7 @@ const GIT_AVAILABLE = await hasGit();
 /**
  * Adversarial security tests.
  *
- * Each of these encodes a promise Project Brain makes, attacked rather than
+ * Each of these encodes a promise StateNest makes, attacked rather than
  * merely exercised. A secret leaking, a profile bleeding into another, or an
  * archive writing outside its directory would all be silent failures: the user
  * would have no way to notice until the damage was done.
@@ -92,7 +92,7 @@ describe('privacy red team', () => {
     });
   }
 
-  /** Everything Project Brain has written, as one string. */
+  /** Everything StateNest has written, as one string. */
   async function storedText(workspace: Workspace): Promise<string> {
     let out = '';
     const walk = async (dir: string): Promise<void> => {
@@ -224,7 +224,7 @@ describe('privacy red team', () => {
 
     const log = await readFile(workspace.paths.logFile, 'utf8');
     expect(log).not.toContain(FAKE.github);
-    expect(log).toContain('redacted by Project Brain');
+    expect(log).toContain('redacted by StateNest');
   });
 
   it('an export is blocked while a credential is present', async () => {
@@ -558,11 +558,11 @@ describe('profile isolation under attack', () => {
     expect(workFiles.stdout.trim()).toBe('');
   });
 
-  it('sync refuses to operate on a directory outside the Project Brain home', async () => {
+  it('sync refuses to operate on a directory outside the StateNest home', async () => {
     const workspace = await Workspace.initialize({ home: home.path });
     const foreign = { ...workspace.profilePaths, root: code.path };
     expect(() => new ProfileSync(foreign, workspace.paths.home)).toThrow(
-      /outside the Project Brain home/i,
+      /outside the StateNest home/i,
     );
   });
 
@@ -619,7 +619,7 @@ describe('dashboard security', () => {
       '/....//....//etc/passwd',
       '/api/project?id=../../../../etc/passwd',
       '/api/project?id=%2e%2e%2f%2e%2e%2fetc%2fpasswd',
-      '/.project-brain/config.yaml',
+      '/.statenest/config.yaml',
       '/api/search?q=../../../etc/passwd',
     ])('refuses to serve %s', async (path) => {
       const response = await fetch(url(path));

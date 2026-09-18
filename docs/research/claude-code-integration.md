@@ -41,7 +41,7 @@ design, so each is enforced in code and named here so it is not rediscovered.
 | `SessionStart` delays the model's first response roughly 1:1 | — | Session brief capped at 4,000 chars; no git process is spawned on this path |
 | Session-lifecycle hooks **cannot invoke an LLM** — `prompt` and `agent` hook types are unsupported on SessionStart/SessionEnd/PreCompact | — | Default checkpoint mode is `manual-smart`; see ADR 0005 |
 | `${CLAUDE_PLUGIN_ROOT}` is **not** in the environment of commands Claude runs through the Bash tool | — | Skills use MCP tools, never a path-relative script |
-| `${CLAUDE_PLUGIN_ROOT}` changes on every plugin update | — | No state is ever written there; data lives in `~/.project-brain` |
+| `${CLAUDE_PLUGIN_ROOT}` changes on every plugin update | — | No state is ever written there; data lives in `~/.statenest` |
 | A plugin gets **no dependency install** when loaded in place | — | Entry points are bundled; see ADR 0006 |
 
 **Measured SessionStart hook latency across all plugins on the test machine**
@@ -55,7 +55,7 @@ Brain's own hook measures p50 **116ms** end-to-end including Node startup.
 Verified against the docs and against installed plugins on disk.
 
 ```
-project-brain/
+statenest/
   .claude-plugin/
     plugin.json          <- the ONLY file that goes in here
     marketplace.json     <- present because this repo is also its own marketplace
@@ -69,7 +69,7 @@ project-brain/
 - Everything except `plugin.json` lives at the **plugin root**, never inside
   `.claude-plugin/`. This is the single most common plugin mistake.
 - `name` must be kebab-case and becomes the namespace: our skills are invoked
-  as `/project-brain:resume`.
+  as `/statenest:resume`.
 - If a marketplace entry lists the plugin under a different name, **the
   marketplace entry name wins** for `enabledPlugins` and `/plugin`.
 - Setting `version` **pins** the plugin: users only get updates when it is bumped.
@@ -89,8 +89,8 @@ project-brain/
 `.mcp.json` at the plugin root. The `mcpServers` wrapper key is optional — a
 flat map also loads — but we use the documented wrapper form.
 
-Our server is registered as `plugin:project-brain:brain`, and its tools appear
-to the model as `mcp__plugin_project-brain_brain__projectbrain_*`.
+Our server is registered as `plugin:statenest:brain`, and its tools appear
+to the model as `mcp__plugin_statenest_brain__projectbrain_*`.
 
 ### Exec form vs shell form
 
@@ -154,7 +154,7 @@ be rewritten.
 Receives `compact_summary`: a model-written summary of the conversation,
 **already generated, at no additional cost**.
 
-This is the only place Project Brain gets a high-quality narrative checkpoint
+This is the only place StateNest gets a high-quality narrative checkpoint
 without asking the user to write one or spending money on an API call — and it
 arrives at exactly the moment the session is about to forget the work. We
 condense it, run it through the secret scanner, and write one checkpoint that
@@ -194,7 +194,7 @@ directory and not a git URL. So installation is always two steps:
 
 ```
 claude plugin marketplace add <source>
-claude plugin install project-brain@project-brain
+claude plugin install statenest@statenest
 ```
 
 **Load-in-place (verified empirically):** a marketplace added from a *local
@@ -206,7 +206,7 @@ A copy does appear under `~/.claude/plugins/cache/...` and is recorded as
 `installPath`, but that copy is stale bookkeeping and is **not** what Claude
 Code loads. Editing it has no effect.
 
-This is what `pb integrate claude` relies on: the installed npm package
+This is what `statenest integrate claude` relies on: the installed npm package
 directory is both the marketplace and the plugin.
 
 ---

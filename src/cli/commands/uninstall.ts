@@ -9,7 +9,7 @@ import { contractHome } from '../../util/paths.js';
 import { pathExists } from '../../util/fs-atomic.js';
 
 /**
- * Removing Project Brain.
+ * Removing StateNest.
  *
  * A tool that is hard to remove is a tool people hesitate to install. The
  * default here removes integrations and leaves every byte of the user's data
@@ -18,9 +18,9 @@ import { pathExists } from '../../util/fs-atomic.js';
  */
 export function uninstallCommand(): Command {
   return new Command('uninstall')
-    .description('Remove Project Brain integrations, and optionally its data')
+    .description('Remove StateNest integrations, and optionally its data')
     .option('--integrations-only', 'remove coding-agent integrations, keep everything else')
-    .option('--all', 'also delete all Project Brain data (asks first)')
+    .option('--all', 'also delete all StateNest data (asks first)')
     .option('-y, --yes', 'do not prompt (never implies --all)')
     .action(async (options: UninstallOptions) => {
       try {
@@ -29,7 +29,7 @@ export function uninstallCommand(): Command {
         const dataExists = await pathExists(paths.home);
 
         print('');
-        heading('Uninstall Project Brain');
+        heading('Uninstall StateNest');
         print('');
 
         // -- Always: integrations --------------------------------------------
@@ -66,7 +66,7 @@ export function uninstallCommand(): Command {
           if (choice === 1) {
             print('');
             print(style.yellow('  This permanently deletes every project record, checkpoint,'));
-            print(style.yellow('  decision and note Project Brain has stored.'));
+            print(style.yellow('  decision and note StateNest has stored.'));
             if (counts.hasSync) {
               print(
                 style.dim('  Your synced git repository is not touched; you could re-clone it.'),
@@ -103,7 +103,7 @@ export function uninstallCommand(): Command {
 
         print('');
         print(style.dim('  The CLI itself is an npm package:'));
-        print(bullet(style.cyan('npm uninstall -g project-brain')));
+        print(bullet(style.cyan('npm uninstall -g statenest')));
         if (!dataRemoved && dataExists) {
           print('');
           print(style.dim(`  Your data remains at ${contractHome(paths.home)}.`));

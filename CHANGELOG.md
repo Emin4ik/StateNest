@@ -13,6 +13,33 @@ Migrations are provided and are never destructive: see `docs/data-model.md`.
 First release. Not yet published: see
 [docs/release-readiness.md](docs/release-readiness.md).
 
+### Naming
+
+The project was developed under the working name "Project Brain" and renamed to
+**StateNest** before any release. That name could not be used: `project-brain`
+on npm belongs to an actively maintained product in the same category, a paid
+commercial app uses the literal name, and "project brain" had become the generic
+phrase for the category. Nothing was ever published under it. See
+[docs/research/final-name-selection.md](docs/research/final-name-selection.md).
+
+What changed with it:
+
+- npm package `statenest`; the CLI command is `statenest` (was `pb`)
+- Data directory `~/.statenest` (was `~/.project-brain`)
+- Environment variables `STATENEST_HOME`, `STATENEST_PROFILE`, `STATENEST_DEBUG`
+  (were `PROJECT_BRAIN_*`)
+- Claude Code plugin, marketplace and MCP server are all named `statenest`;
+  skills are `/statenest:resume`, `/statenest:checkpoint`, `/statenest:where`
+
+**Pre-rename data is detected, never touched.** If `~/.statenest` does not
+exist but `~/.project-brain` does, StateNest says so and prints the `mv` command
+that moves it, rather than reading the old directory or migrating it
+automatically. Supporting two layouts permanently for a name that was never
+published would be complexity with no beneficiary. Persisted identifiers —
+project ids (`prj_`), checkpoint ids (`cp_`), machine ids and `schema_version` —
+are deliberately unchanged, so moving the directory is genuinely all that is
+needed.
+
 ### Added
 
 - Project registry with git-remote-derived identity that is stable across machines
@@ -23,15 +50,15 @@ First release. Not yet published: see
 - Local lexical search across projects, checkpoints, decisions, tasks and servers
 - Machines and remote environments, with `~/.ssh/config` import by explicit selection
 - Profiles as independently syncable directories, isolating work from personal
-- Secret detection and redaction on everything written, plus `pb privacy audit`
+- Secret detection and redaction on everything written, plus `statenest privacy audit`
 - Claude Code plugin: SessionStart brief, Stop tracking, PreCompact/PostCompact
   checkpointing, SessionEnd checkpointing, seven skills and ten MCP tools
-- `pb doctor`, with an actionable fix for every failing check
+- `statenest doctor`, with an actionable fix for every failing check
 - Optional sync of one profile to a private git repository, with a blocking
   secret audit before any commit and non-destructive conflict handling
 - Local read-only dashboard, loopback-only by default
-- `pb export` / `pb import` backups, excluding machine-local state
-- `pb uninstall`, which keeps your data unless you explicitly say otherwise
+- `statenest export` / `statenest import` backups, excluding machine-local state
+- `statenest uninstall`, which keeps your data unless you explicitly say otherwise
 - Published JSON Schemas for every stored record
 
 ### Security
@@ -39,7 +66,7 @@ First release. Not yet published: see
 - Stored values are redacted again when they are **read**, not only when they
   are written. A credential that reached a file before a detection pattern
   existed can no longer flow out of it into a model's context, the dashboard or
-  search results. Redaction on read does not rewrite the file; `pb privacy
+  search results. Redaction on read does not rewrite the file; `statenest privacy
   audit` still reports it
 - Archive extraction validates every member before unpacking, rejecting
   absolute paths, drive letters, UNC paths, `..` traversal and symlink members,
@@ -64,18 +91,18 @@ First release. Not yet published: see
 - `contractHome` used the running platform's path separator, so a Windows path
   was never shortened when displayed on macOS
 - A missing `tar` binary was reported as a corrupt archive
-- `pb init --profile work` created a profile called "personal": a global
+- `statenest init --profile work` created a profile called "personal": a global
   `--profile` option and the subcommand's own both parsed the value, and the
   global one won wherever it appeared
-- `pb profile` did not exist, although error messages recommended it
-- `pb resume` never said what the work was about unless `--full` was passed
+- `statenest profile` did not exist, although error messages recommended it
+- `statenest resume` never said what the work was about unless `--full` was passed
 - Next actions were listed in insertion order, so a months-old aspiration
   outranked the actual next step
-- `pb status` printed only "0 projects" when empty, with no way forward
-- `pb sync init` asked for confirmation about privacy before checking that its
+- `statenest status` printed only "0 projects" when empty, with no way forward
+- `statenest sync init` asked for confirmation about privacy before checking that its
   argument was a git remote at all
 - A directory reached through a symlink (macOS `/tmp` -> `/private/tmp`) was
-  registered as a second location on the same machine, so `pb resume` showed a
+  registered as a second location on the same machine, so `statenest resume` showed a
   project as if it existed on two computers
 - `.mcp.json` was missing from the published package, so an npm install
   produced a plugin with working hooks and skills but no MCP tools

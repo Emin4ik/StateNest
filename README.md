@@ -1,12 +1,7 @@
-# Project Brain
+# StateNest
 
-> **Pre-release. Not published, and not installable by the name below.**
->
-> `project-brain` on npm is an unrelated project by another author, and
-> "Project Brain" is a name already in use. This project is being renamed
-> before its first release — see
-> [docs/research/project-name.md](docs/research/project-name.md). Until then,
-> install it from a clone (see [Install](#install)).
+> **v0.1.0 release candidate.** The package is not on npm yet, so install it
+> from a clone — see [Install](#install). Everything else works today.
 
 **You have forty projects. You cannot remember where you stopped in any of them.**
 
@@ -16,12 +11,12 @@ not touched in three months?
 
 Git history does not answer these questions. Neither does an AI chat log.
 
-Project Brain does. It is a local-first control plane for your own work: it
+StateNest does. It is a local-first control plane for your own work: it
 remembers your projects, where each one lives on each machine, which servers
 they deploy to, what you finished, what is blocked, and what you meant to do
 next.
 
-Everything is plain YAML and Markdown in `~/.project-brain`. Nothing is
+Everything is plain YAML and Markdown in `~/.statenest`. Nothing is
 uploaded. There is no account.
 
 ---
@@ -29,7 +24,7 @@ uploaded. There is no account.
 ## 30 seconds
 
 ```console
-$ pb recent
+$ statenest recent
 
 TODAY
   taxi-checker  main
@@ -44,7 +39,7 @@ TODAY
 ```
 
 ```console
-$ pb resume world-war
+$ statenest resume world-war
 
 world-war-rts
 active  ·  3d ago
@@ -71,7 +66,7 @@ active  ·  3d ago
 ```
 
 ```console
-$ pb where taxi
+$ statenest where taxi
 
 taxi-checker
 
@@ -93,21 +88,21 @@ That is the product.
 ## Install
 
 ```bash
-git clone <this repository>
-cd project-brain
+git clone https://github.com/Emin4ik/StateNest.git
+cd StateNest
 npm ci && npm run build && npm link
-pb init
+statenest init
 ```
 
-Once the project is renamed and published, this becomes a single
-`npm install -g <name>`.
+Requires Node.js 22.12 or newer. Once published this becomes a single
+`npm install -g statenest`.
 
-`pb init` asks which directories hold your projects, scans them, and shows you
+`statenest init` asks which directories hold your projects, scans them, and shows you
 what it found. It takes about two minutes, and it tells you exactly what it
 stores before it writes anything.
 
 ```
-✓ Project Brain initialised
+✓ StateNest initialised
 ✓ Machine registered: emin-macbook (macos)
 ✓ 37 projects discovered
 ✓ 12 active in the last 30 days
@@ -116,7 +111,7 @@ stores before it writes anything.
 ### Claude Code
 
 ```bash
-pb integrate claude
+statenest integrate claude
 ```
 
 Now, when you open Claude Code inside a registered project, it already knows
@@ -124,7 +119,7 @@ where you left off — about 600 characters of the right context, not a dump of
 your history:
 
 ```
-# Project Brain
+# StateNest
 
 Project: world-war-rts
 Branch: phase-7
@@ -141,11 +136,11 @@ Last activity: 3d ago
 - fix refinery rebuild behaviour
 ```
 
-You also get skills — `/project-brain:resume`, `/project-brain:checkpoint`,
-`/project-brain:where` — and MCP tools that Claude uses on its own when you
+You also get skills — `/statenest:resume`, `/statenest:checkpoint`,
+`/statenest:where` — and MCP tools that Claude uses on its own when you
 ask "what was I doing yesterday?".
 
-Project Brain adds about **90ms** to session start — including Node's own
+StateNest adds about **90ms** to session start — including Node's own
 startup — and never spawns a model. That figure is flat from 10 projects to
 500, because session start resolves the project by a hash of its git remote
 rather than by searching. Reproduce it with `npm run bench`.
@@ -155,25 +150,25 @@ rather than by searching. Reproduce it with `npm run bench`.
 ## Commands
 
 ```
-pb init                      set up on this machine
-pb scan ~/Projects ~/Work    find and register projects
-pb projects                  list everything
-pb recent                    what you have been working on
-pb resume <project>          pick a project back up
-pb where <project>           every copy and every deployment
-pb show <project>            everything known about one project
-pb status                    active, blocked, stale, uncommitted
-pb search "refinery"         search your own history
-pb checkpoint -m "..."       record what you just did
-pb task add "..."            record a next action
-pb decision add "..."        record why you chose something
-pb remote import-ssh         pick servers from your ~/.ssh/config
-pb deploy add <project> ...  record where a project runs
-pb profile create work       keep work and personal separate
-pb export backup.tgz         back up everything to one file
-pb import backup.tgz         restore from a backup
-pb doctor                    check everything, with fixes
-pb privacy audit             scan your own data for secrets
+statenest init                      set up on this machine
+statenest scan ~/Projects ~/Work    find and register projects
+statenest projects                  list everything
+statenest recent                    what you have been working on
+statenest resume <project>          pick a project back up
+statenest where <project>           every copy and every deployment
+statenest show <project>            everything known about one project
+statenest status                    active, blocked, stale, uncommitted
+statenest search "refinery"         search your own history
+statenest checkpoint -m "..."       record what you just did
+statenest task add "..."            record a next action
+statenest decision add "..."        record why you chose something
+statenest remote import-ssh         pick servers from your ~/.ssh/config
+statenest deploy add <project> ...  record where a project runs
+statenest profile create work       keep work and personal separate
+statenest export backup.tgz         back up everything to one file
+statenest import backup.tgz         restore from a backup
+statenest doctor                    check everything, with fixes
+statenest privacy audit             scan your own data for secrets
 ```
 
 Every command takes `--json`.
@@ -182,7 +177,7 @@ Every command takes `--json`.
 
 ## What it stores, and what it never stores
 
-Project Brain reads your home directory. It should have to earn that, so here
+StateNest reads your home directory. It should have to earn that, so here
 it is plainly.
 
 **Stores** — project names and descriptions; where each project lives on each
@@ -195,22 +190,22 @@ private keys, passwords or API tokens. Raw AI transcripts. There is no
 telemetry, and no code in this repository that could send any.
 
 The filename deny-list is checked *before* a file is opened, and everything
-Project Brain is about to write passes through a secret scanner first. Run
-`pb privacy audit` whenever you want to check for yourself.
+StateNest is about to write passes through a secret scanner first. Run
+`statenest privacy audit` whenever you want to check for yourself.
 
 Full detail: [docs/security-model.md](docs/security-model.md).
 
 ### Work and personal are separate directories
 
 ```bash
-pb profile create work        # a separate set of projects
-pb profile use work           # switch
-pb profile list               # see them all
+statenest profile create work        # a separate set of projects
+statenest profile use work           # switch
+statenest profile list               # see them all
 ```
 
 ```
-~/.project-brain/profiles/personal/   your own repo, your own remote
-~/.project-brain/profiles/work/       a different repo, a different remote
+~/.statenest/profiles/personal/   your own repo, your own remote
+~/.statenest/profiles/work/       a different repo, a different remote
 ```
 
 A work project cannot sync into a personal repository, because sync operates on
@@ -220,7 +215,7 @@ a property of the layout, not a rule the code has to remember.
 ### Optional sync, to a repository you own
 
 ```bash
-pb sync init git@github.com:you/project-brain-data.git   # PRIVATE
+statenest sync init git@github.com:you/statenest-data.git   # PRIVATE
 ```
 
 Your data, your repository, your choice. Everything works without it, offline,
@@ -231,7 +226,7 @@ forever. Sync refuses to run if the secret scanner finds anything.
 ## Why not just use an AI memory tool?
 
 Because they solve a different problem. They remember what was said in a
-conversation. Project Brain remembers **what is true about your machines and
+conversation. StateNest remembers **what is true about your machines and
 your repositories right now** — and most of it is re-derived by scanning, not
 asserted by a model.
 

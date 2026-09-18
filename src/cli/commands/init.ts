@@ -17,7 +17,7 @@ import { installClaudeIntegration, describeClaudeInstall } from '../../integrati
 
 export function initCommand(): Command {
   return new Command('init')
-    .description('Set up Project Brain on this machine')
+    .description('Set up StateNest on this machine')
     .option('-y, --yes', 'accept every default, ask nothing')
     .option('--machine-name <name>', 'what to call this computer')
     .option('--roots <dirs...>', 'directories that contain your projects')
@@ -54,7 +54,7 @@ async function runInit(options: InitOptions): Promise<void> {
     print(style.yellow('git was not found on this machine.'));
     print(
       style.dim(
-        'Project Brain works without it, but it cannot read branches, commits or uncommitted changes.',
+        'StateNest works without it, but it cannot read branches, commits or uncommitted changes.',
       ),
     );
   }
@@ -68,7 +68,7 @@ async function runInit(options: InitOptions): Promise<void> {
   // -- Home and profile ----------------------------------------------------
   // `--profile` is a global option, parsed wherever it appears in the command
   // line. Declaring it again on this subcommand meant the global one always
-  // consumed the value and this one silently kept its default, so `pb init
+  // consumed the value and this one silently kept its default, so `statenest init
   // --profile work` created a profile called "personal".
   const workspace = await Workspace.initialize({
     ...(globals.home ? { home: globals.home } : {}),
@@ -148,7 +148,7 @@ async function runInit(options: InitOptions): Promise<void> {
   }
 
   print('');
-  success('Project Brain initialised');
+  success('StateNest initialised');
   print(`  ${style.dim(contractHome(workspace.paths.home))}`);
   success(`Machine registered: ${style.bold(machine.name)} ${style.dim(`(${os})`)}`);
   if (claudeResult) {
@@ -163,16 +163,16 @@ async function runInit(options: InitOptions): Promise<void> {
 
   print('');
   print(style.dim('Try:'));
-  print(bullet(style.cyan('pb projects')));
-  print(bullet(style.cyan('pb recent')));
-  print(bullet(style.cyan('pb resume <project>')));
-  print(bullet(style.cyan('pb doctor')));
+  print(bullet(style.cyan('statenest projects')));
+  print(bullet(style.cyan('statenest recent')));
+  print(bullet(style.cyan('statenest resume <project>')));
+  print(bullet(style.cyan('statenest doctor')));
   print('');
 }
 
 function printWelcome(): void {
   print('');
-  heading('Project Brain');
+  heading('StateNest');
   print(style.dim('A local-first memory for your projects, machines and deployments.'));
 }
 
@@ -199,7 +199,7 @@ function printPrivacySummary(homePath: string): void {
   }
   print('');
   print(style.dim('  Nothing leaves this machine. Optional sync to a private git'));
-  print(style.dim('  repository you own can be enabled later with: pb sync init'));
+  print(style.dim('  repository you own can be enabled later with: statenest sync init'));
 }
 
 async function chooseRoots(

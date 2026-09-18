@@ -12,10 +12,10 @@ argument-hint: "[project name]"
 
 ## Important
 
-Project Brain records **addresses only**. It holds no passwords, no keys, and
+StateNest records **addresses only**. It holds no passwords, no keys, and
 no way to connect anywhere. If the user wants to act on a server, give them the
 command to run themselves — for example `ssh taxi-prod` — rather than
 attempting a connection.
 
 If the project has no recorded deployment, say so, and mention they can record
-one with `pb deploy add <project> --remote <server> --path /opt/app`.
+one with `statenest deploy add <project> --remote <server> --path /opt/app`.

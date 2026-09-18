@@ -135,7 +135,7 @@ export function parseSshConfig(raw: string, sourceFile = '<memory>'): SshHostCan
 
     if (CREDENTIAL_KEYS.has(keyword)) {
       // Noted, never read. The user is told the entry uses a key file so they
-      // understand why Project Brain stores no authentication detail.
+      // understand why StateNest stores no authentication detail.
       for (const candidate of current) candidate.usesIdentityFile = true;
       continue;
     }

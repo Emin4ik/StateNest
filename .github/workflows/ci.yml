@@ -5,7 +5,7 @@ on:
     branches: [main]
   pull_request:
 
-# Project Brain reads the filesystem and shells out to git, so the matrix is
+# StateNest reads the filesystem and shells out to git, so the matrix is
 # not ceremony: path handling, atomic renames and git behaviour all differ
 # between these platforms, and every one of them is a supported target.
 jobs:
@@ -77,12 +77,12 @@ jobs:
         run: |
           npm pack --dry-run
           npm pack
-          tar -tzf project-brain-*.tgz | sort
+          tar -tzf statenest-*.tgz | sort
 
       - name: Install the packed tarball into a clean prefix
         run: |
           PREFIX="$(mktemp -d)"
-          npm install -g --prefix "$PREFIX" ./project-brain-*.tgz
+          npm install -g --prefix "$PREFIX" ./statenest-*.tgz
           "$PREFIX/bin/pb" --version
           "$PREFIX/bin/pb" doctor || true
 

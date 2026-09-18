@@ -15,7 +15,7 @@ export function renderPage(): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Project Brain</title>
+<title>StateNest</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -109,7 +109,7 @@ export function renderPage(): string {
 </head>
 <body>
 <header>
-  <h1>Project Brain <span id="profile"></span></h1>
+  <h1>StateNest <span id="profile"></span></h1>
   <nav id="tabs">
     <button data-view="overview" aria-selected="true">Overview</button>
     <button data-view="projects" aria-selected="false">Projects</button>
@@ -187,7 +187,7 @@ export function renderPage(): string {
   // ---- Projects -----------------------------------------------------------
   async function viewProjects() {
     const { projects } = await get('/api/projects');
-    if (!projects.length) return show(empty('No projects registered yet. Run: pb scan ~/Projects'));
+    if (!projects.length) return show(empty('No projects registered yet. Run: statenest scan ~/Projects'));
 
     show(el('div', { class: 'cards' }, projects.map(projectCard)), footnote());
   }
@@ -300,10 +300,10 @@ export function renderPage(): string {
 
   async function viewRemotes() {
     const { remotes } = await get('/api/remotes');
-    if (!remotes.length) return show(empty('No servers registered. Run: pb remote import-ssh'));
+    if (!remotes.length) return show(empty('No servers registered. Run: statenest remote import-ssh'));
     show(table(['Server', 'Environment', 'Address', 'Provider', 'Projects'],
       remotes.map((r) => [r.name, r.environment, r.ssh_alias || r.host || '-', r.provider || '-', r.projects.join(', ') || '-'])),
-      el('p', { class: 'note', text: 'Addresses only. Project Brain stores no credentials and cannot connect anywhere.' }));
+      el('p', { class: 'note', text: 'Addresses only. StateNest stores no credentials and cannot connect anywhere.' }));
   }
 
   function table(headers, rows) {
@@ -322,7 +322,7 @@ export function renderPage(): string {
   }
 
   function footnote() {
-    return el('p', { class: 'note', text: 'Read-only view of ~/.project-brain on this machine. Nothing here leaves your computer.' });
+    return el('p', { class: 'note', text: 'Read-only view of ~/.statenest on this machine. Nothing here leaves your computer.' });
   }
 
   // ---- Wiring -------------------------------------------------------------

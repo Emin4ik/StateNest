@@ -1,5 +1,5 @@
 /**
- * Project Brain uses a single error type for everything the user might
+ * StateNest uses a single error type for everything the user might
  * plausibly have caused or can fix. Every one of these carries a human
  * explanation and, where possible, a concrete next command to run.
  *

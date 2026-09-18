@@ -2,7 +2,7 @@
  * Secret detection rules.
  *
  * Deliberately a small, explicit, high-precision set rather than an attempt to
- * reimplement gitleaks. Project Brain scans its own output - checkpoints,
+ * reimplement gitleaks. StateNest scans its own output - checkpoints,
  * project notes, state files - not arbitrary source trees, so the input is
  * mostly prose written about a coding session. In that context a rule that
  * fires on a real token is worth far more than broad coverage that cries wolf

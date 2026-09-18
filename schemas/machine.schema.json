@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN/blob/main/schemas/v1/machine.json",
-  "title": "Project Brain machine",
+  "$id": "https://github.com/Emin4ik/StateNest/blob/main/schemas/v1/machine.json",
+  "title": "StateNest machine",
   "description": "A computer this profile has been used from.",
   "type": "object",
   "properties": {

@@ -6,7 +6,7 @@ import { errnoCode } from './errors.js';
 /**
  * A short-lived advisory lock, for read-modify-write on a shared file.
  *
- * Most of Project Brain avoids needing this: checkpoints are immutable files
+ * Most of StateNest avoids needing this: checkpoints are immutable files
  * with unique names, and mutable records are replaced atomically, so a
  * concurrent write can never produce a torn file.
  *

@@ -20,12 +20,12 @@ const execFileAsync = promisify(execFile);
  * Uses `tar` rather than a bundled archive library: it is present on every
  * platform we target (Windows has shipped bsdtar since Windows 10 1803), and a
  * backup the user can open with tools they already have is worth more than one
- * only Project Brain can read.
+ * only StateNest can read.
  */
 export function exportCommand(): Command {
   return new Command('export')
-    .description('Write a backup archive of your Project Brain data')
-    .argument('[file]', 'archive to write', 'project-brain-backup.tar.gz')
+    .description('Write a backup archive of your StateNest data')
+    .argument('[file]', 'archive to write', 'statenest-backup.tar.gz')
     .option('--profile-only', 'export only the active profile')
     .option('--skip-audit', 'skip the secret scan (not recommended)')
     .action(async (file: string, options: { profileOnly?: boolean; skipAudit?: boolean }) => {
@@ -42,7 +42,7 @@ export function exportCommand(): Command {
             'Export stopped: something in your data looks like a credential.',
             {
               details: describeBlock(audit).slice(0, 8),
-              hints: ['pb privacy audit', 'Remove and rotate it, then export again.'],
+              hints: ['statenest privacy audit', 'Remove and rotate it, then export again.'],
             },
           );
         }
@@ -97,7 +97,7 @@ export function exportCommand(): Command {
 
 export function importCommand(): Command {
   return new Command('import')
-    .description('Restore Project Brain data from a backup archive')
+    .description('Restore StateNest data from a backup archive')
     .argument('<file>', 'archive to restore')
     .option('--force', 'overwrite existing data')
     .option('-y, --yes', 'do not prompt')
@@ -114,7 +114,7 @@ export function importCommand(): Command {
         const existing = await pathExists(paths.configFile);
         if (existing && !options.force) {
           print('');
-          print(`  Project Brain data already exists at ${style.bold(contractHome(paths.home))}`);
+          print(`  StateNest data already exists at ${style.bold(contractHome(paths.home))}`);
           print(
             style.dim(
               '  Importing merges the archive over it. Files with the same name are replaced.',
@@ -180,8 +180,8 @@ export function importCommand(): Command {
           print(`  ${style.dim(`${pluralize(profiles.length, 'profile')}: ${profiles.join(', ')}`)}`);
           print(`  ${style.dim(`this machine: ${machineId}`)}`);
           print('');
-          print(bullet(style.cyan('pb projects')));
-          print(bullet(style.cyan('pb doctor')));
+          print(bullet(style.cyan('statenest projects')));
+          print(bullet(style.cyan('statenest doctor')));
           print('');
         } finally {
           await rm(staging, { recursive: true, force: true });

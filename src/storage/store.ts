@@ -38,8 +38,8 @@ import type { Timestamp } from '../util/time.js';
  * Two behaviours are load-bearing:
  *
  * - Nothing here throws because a single file is unreadable. A corrupt
- *   checkpoint written by a crashed process must not make `pb projects`
- *   useless; issues are collected and surfaced by `pb doctor`.
+ *   checkpoint written by a crashed process must not make `statenest projects`
+ *   useless; issues are collected and surfaced by `statenest doctor`.
  *
  * - Nothing here ever deletes data it could not parse. Unreadable files are
  *   reported and left exactly where they are.
@@ -304,7 +304,7 @@ export class Store {
     };
   }
 
-  /** Every checkpoint across every project, newest first. Used by `pb recent`. */
+  /** Every checkpoint across every project, newest first. Used by `statenest recent`. */
   async listAllCheckpointFiles(): Promise<{ projectId: string; files: string[] }[]> {
     const projectDirs = await listDirectories(this.paths.checkpointsDir);
     return Promise.all(
@@ -394,7 +394,7 @@ function decisionsHeader(projectId: string): string {
   return [
     '# Decisions',
     '',
-    `<!-- Project Brain appends one \`##\` block per decision for project ${projectId}.`,
+    `<!-- StateNest appends one \`##\` block per decision for project ${projectId}.`,
     '     The HTML comment under each heading holds the structured fields;',
     '     everything else is yours to edit. Entries are never rewritten. -->',
     '',
@@ -518,7 +518,7 @@ function firstParagraph(body: string): string {
   return paragraph.replace(/^#+\s*/gm, '').trim();
 }
 
-/** Exported for `pb doctor`, which reports the basename of an unreadable file. */
+/** Exported for `statenest doctor`, which reports the basename of an unreadable file. */
 export function issueLabel(issue: LoadIssue): string {
   return `${basename(issue.filePath)}: ${issue.reason}`;
 }

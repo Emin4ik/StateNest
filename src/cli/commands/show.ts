@@ -7,7 +7,7 @@ import { contractHome } from '../../util/paths.js';
 
 export function showCommand(): Command {
   return new Command('show')
-    .description('Everything Project Brain knows about one project')
+    .description('Everything StateNest knows about one project')
     .argument('<project>', 'project name, alias or id')
     .action(async (term: string) => {
       const { workspace, registry } = await openContext();
@@ -97,8 +97,8 @@ export function showCommand(): Command {
       }
 
       print('');
-      print(style.dim(`pb resume ${project.name}   to pick this back up`));
-      print(style.dim(`pb where ${project.name}    to see every copy and deployment`));
+      print(style.dim(`statenest resume ${project.name}   to pick this back up`));
+      print(style.dim(`statenest where ${project.name}    to see every copy and deployment`));
       print('');
     });
 }

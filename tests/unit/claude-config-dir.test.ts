@@ -9,7 +9,7 @@ import { claudeConfigDir } from '../../src/integrations/claude/install.js';
  * It was not: `claudeHomeExists()` and `isPluginEnabled()` read
  * `~/.claude` unconditionally. Two consequences, the second worse than the
  * first. A user who relocates Claude Code's config — a setting Claude Code
- * itself supports — got `pb doctor` reporting on a directory Claude Code does
+ * itself supports — got `statenest doctor` reporting on a directory Claude Code does
  * not read. And CONTRIBUTING.md tells contributors to export this variable at a
  * scratch directory before testing an integration, "never your real ~/.claude";
  * that instruction was false, which is the most dangerous kind of documentation

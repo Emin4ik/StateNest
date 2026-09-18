@@ -30,7 +30,7 @@ export function daysBetween(then: Date, reference: Date): number {
 /**
  * Human-friendly relative time: "just now", "3d ago", "2mo ago".
  *
- * Deliberately coarse. Project Brain infers activity from several signals of
+ * Deliberately coarse. StateNest infers activity from several signals of
  * differing precision, so presenting "4 hours 12 minutes ago" would imply an
  * accuracy the underlying data does not have.
  */
@@ -62,7 +62,7 @@ export function relativeTime(
   return `${Math.floor(days / 365)}y ago`;
 }
 
-/** Bucket label used by `pb recent`, grouped the way a person thinks about a week. */
+/** Bucket label used by `statenest recent`, grouped the way a person thinks about a week. */
 export function activityBucket(
   value: string | Date | null | undefined,
   reference = new Date(),

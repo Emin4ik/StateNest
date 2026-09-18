@@ -38,8 +38,8 @@ export function remoteCommand(): Command {
       if (remotes.length === 0) {
         print('No servers registered yet.');
         print('');
-        print(bullet(style.cyan('pb remote import-ssh') + style.dim('   pick from your ~/.ssh/config')));
-        print(bullet(style.cyan('pb remote add <name> --ssh-alias <alias>')));
+        print(bullet(style.cyan('statenest remote import-ssh') + style.dim('   pick from your ~/.ssh/config')));
+        print(bullet(style.cyan('statenest remote add <name> --ssh-alias <alias>')));
         return;
       }
 
@@ -60,7 +60,7 @@ export function remoteCommand(): Command {
         ]),
       );
       print('');
-      print(style.dim('Project Brain stores addresses only. Authentication stays with your ssh config.'));
+      print(style.dim('StateNest stores addresses only. Authentication stays with your ssh config.'));
       print('');
     });
 
@@ -82,8 +82,8 @@ export function remoteCommand(): Command {
       if (!options.sshAlias && !options.host) {
         throw new BrainError('MISSING_ADDRESS', 'A server needs an ssh alias or a hostname.', {
           hints: [
-            `pb remote add ${name} --ssh-alias ${name}`,
-            `pb remote add ${name} --host 203.0.113.10 --user deploy`,
+            `statenest remote add ${name} --ssh-alias ${name}`,
+            `statenest remote add ${name} --host 203.0.113.10 --user deploy`,
           ],
         });
       }
@@ -164,13 +164,13 @@ export function remoteCommand(): Command {
         }
 
         print('');
-        print(style.dim('Project Brain will store only the alias, hostname, user and port.'));
+        print(style.dim('StateNest will store only the alias, hostname, user and port.'));
         print(style.dim('It never reads or stores keys, passwords or anything they point to.'));
 
         // Nothing is pre-ticked. An ssh config routinely holds employer and
         // client infrastructure, so importing is opt-in per host, every time.
         const chosen = await multiSelect(
-          style.bold(`\nWhich of these should Project Brain remember?`),
+          style.bold(`\nWhich of these should StateNest remember?`),
           fresh.map((candidate) => ({
             label: candidate.alias,
             hint: [
@@ -215,8 +215,8 @@ export function remoteCommand(): Command {
         print('');
         success(`Registered ${pluralize(selected.length, 'server')}`);
         print('');
-        print(bullet(style.cyan('pb remote list')));
-        print(bullet(style.cyan('pb deploy add <project> --remote <server> --path /opt/app')));
+        print(bullet(style.cyan('statenest remote list')));
+        print(bullet(style.cyan('statenest deploy add <project> --remote <server> --path /opt/app')));
       } finally {
         closePrompts();
       }
@@ -225,7 +225,7 @@ export function remoteCommand(): Command {
   return command;
 }
 
-/** `pb deploy` links a project to a server. Kept separate from `pb remote`. */
+/** `statenest deploy` links a project to a server. Kept separate from `statenest remote`. */
 export function deployCommand(): Command {
   const command = new Command('deploy').description('Where a project is deployed');
 
@@ -365,6 +365,6 @@ async function resolveRemote(
   }
 
   throw new BrainError('UNKNOWN_REMOTE', `No server matches "${term}".`, {
-    hints: ['pb remote list', 'pb remote import-ssh'],
+    hints: ['statenest remote list', 'statenest remote import-ssh'],
   });
 }

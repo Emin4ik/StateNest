@@ -14,7 +14,7 @@ import { makeFakeRepo, makeTempDir, type TempDir } from '../helpers/fixtures.js'
 /**
  * Cross-platform behaviour.
  *
- * Project Brain targets macOS, Linux, Windows and WSL. CI runs the whole suite
+ * StateNest targets macOS, Linux, Windows and WSL. CI runs the whole suite
  * on the first three, but a green matrix only proves the tests that exist pass
  * there. These exercise the platform-dependent logic *directly*, by passing the
  * platform in, so Windows path semantics are verified on every machine rather
@@ -170,10 +170,10 @@ describe('WSL semantics', () => {
     // same repository seen from both therefore appears as one project with two
     // locations, which is the honest description of the situation.
     const wslHome = createPaths(undefined, {
-      PROJECT_BRAIN_HOME: '/home/alice/.project-brain',
+      STATENEST_HOME: '/home/alice/.statenest',
     });
     const windowsHome = createPaths(undefined, {
-      PROJECT_BRAIN_HOME: 'C:/Users/alice/.project-brain',
+      STATENEST_HOME: 'C:/Users/alice/.statenest',
     });
     expect(wslHome.machineIdentityFile).not.toBe(windowsHome.machineIdentityFile);
   });

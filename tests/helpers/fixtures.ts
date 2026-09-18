@@ -18,18 +18,48 @@ export interface TempDir {
   cleanup: () => Promise<void>;
 }
 
-export async function makeTempDir(prefix = 'project-brain-test-'): Promise<TempDir> {
+export async function makeTempDir(prefix = 'statenest-test-'): Promise<TempDir> {
   // `realpath` because the system temp directory is itself a symlink on macOS
-  // (`/var` -> `/private/var`). Project Brain resolves paths before recording
+  // (`/var` -> `/private/var`). StateNest resolves paths before recording
   // them, so a test comparing against the unresolved form would fail for a
   // reason that has nothing to do with what it is testing.
   const path = await realpath(await mkdtemp(join(tmpdir(), prefix)));
   return {
     path,
-    cleanup: async () => {
-      await rm(path, { recursive: true, force: true });
-    },
+    cleanup: () => removeTree(path),
   };
+}
+
+/**
+ * Delete a directory tree, retrying the errors that mean "not yet".
+ *
+ * `rm -rf` is not atomic, and a git process that has just exited can still
+ * hold a pack file open for a moment: on macOS that surfaces as ENOTEMPTY
+ * while unlinking `objects/pack`, and on Windows as EBUSY or EPERM, routinely,
+ * because the filesystem refuses to unlink an open handle at all.
+ *
+ * Node's own `rm` retries only on Windows and only for some codes, so cleanup
+ * failures show up as unrelated tests failing after the one that actually
+ * finished fine. Retrying here keeps a teardown race from being reported as a
+ * product bug.
+ */
+export async function removeTree(path: string): Promise<void> {
+  const transient = new Set(['ENOTEMPTY', 'EBUSY', 'EPERM', 'EACCES', 'ENOTDIR']);
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await rm(path, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code ?? '';
+      if (attempt >= 5 || !transient.has(code)) {
+        // A leftover temp directory is not worth failing a green run over; the
+        // OS reaps it. Anything else is a real error and should surface.
+        if (transient.has(code)) return;
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50 * (attempt + 1)));
+    }
+  }
 }
 
 /**
@@ -82,9 +112,9 @@ export async function hasGit(): Promise<boolean> {
 }
 
 const GIT_ENV = {
-  GIT_AUTHOR_NAME: 'Project Brain Test',
+  GIT_AUTHOR_NAME: 'StateNest Test',
   GIT_AUTHOR_EMAIL: 'test@example.invalid',
-  GIT_COMMITTER_NAME: 'Project Brain Test',
+  GIT_COMMITTER_NAME: 'StateNest Test',
   GIT_COMMITTER_EMAIL: 'test@example.invalid',
   GIT_CONFIG_GLOBAL: '/dev/null',
   GIT_CONFIG_SYSTEM: '/dev/null',
@@ -112,7 +142,7 @@ export async function makeRealRepo(
     });
 
   await run(['init', '--quiet', `--initial-branch=${branch}`]);
-  await run(['config', 'user.name', 'Project Brain Test']);
+  await run(['config', 'user.name', 'StateNest Test']);
   await run(['config', 'user.email', 'test@example.invalid']);
   await run(['config', 'commit.gpgsign', 'false']);
 
@@ -142,11 +172,11 @@ export async function writeFiles(
 }
 
 /**
- * An isolated Project Brain home for one test.
+ * An isolated StateNest home for one test.
  *
- * `PROJECT_BRAIN_HOME` is honoured by `createPaths`, so pointing it at a temp
+ * `STATENEST_HOME` is honoured by `createPaths`, so pointing it at a temp
  * directory is all it takes to guarantee a test can never touch the real one.
  */
 export async function makeTempBrainHome(): Promise<TempDir> {
-  return makeTempDir('project-brain-home-');
+  return makeTempDir('statenest-home-');
 }

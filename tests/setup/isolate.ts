@@ -6,7 +6,7 @@ import { afterAll } from 'vitest';
 /**
  * Prove isolation before a single test runs, and abort the run if it cannot.
  *
- * Project Brain reads and writes a developer's home directory for a living.
+ * StateNest reads and writes a developer's home directory for a living.
  * A test suite for such a tool has exactly one unacceptable failure mode:
  * mutating the real one. Passing temp paths everywhere is not enough, because
  * a single default that falls back to `homedir()` reintroduces the risk and
@@ -52,15 +52,15 @@ process.env.XDG_STATE_HOME = join(fakeHome, '.local', 'state');
 process.env.XDG_CACHE_HOME = join(fakeHome, '.cache');
 
 // Any test that forgets to pass an explicit home lands here, not in a real one.
-process.env.PROJECT_BRAIN_HOME = join(fakeHome, '.project-brain');
+process.env.STATENEST_HOME = join(fakeHome, '.statenest');
 
 // Git must not read or write the developer's real identity or config.
 process.env.GIT_CONFIG_GLOBAL = join(fakeHome, '.gitconfig-test');
 process.env.GIT_CONFIG_SYSTEM = join(fakeHome, '.gitconfig-system-test');
 process.env.GIT_TERMINAL_PROMPT = '0';
-process.env.GIT_AUTHOR_NAME = 'Project Brain Test';
+process.env.GIT_AUTHOR_NAME = 'StateNest Test';
 process.env.GIT_AUTHOR_EMAIL = 'test@example.invalid';
-process.env.GIT_COMMITTER_NAME = 'Project Brain Test';
+process.env.GIT_COMMITTER_NAME = 'StateNest Test';
 process.env.GIT_COMMITTER_EMAIL = 'test@example.invalid';
 
 // Claude Code must never see the developer's real plugin or settings state.
@@ -74,14 +74,14 @@ if (seenHome === REAL_HOME) {
 if (!seenHome.startsWith(realpathSync(tmpdir()))) {
   fail(`os.homedir() resolved to ${seenHome}, which is not inside the temp directory`);
 }
-if (process.env.PROJECT_BRAIN_HOME?.startsWith(REAL_HOME)) {
-  fail('PROJECT_BRAIN_HOME points inside the real home');
+if (process.env.STATENEST_HOME?.startsWith(REAL_HOME)) {
+  fail('STATENEST_HOME points inside the real home');
 }
 
 // -- 3. Arm the write guard ----------------------------------------------
 // Both the sandbox and the OS temp dir are permitted: fixtures legitimately
 // create project trees under `mkdtemp`, outside the fake home.
-process.env.PROJECT_BRAIN_WRITE_ROOT = [sandbox, realpathSync(tmpdir())].join(
+process.env.STATENEST_WRITE_ROOT = [sandbox, realpathSync(tmpdir())].join(
   process.platform === 'win32' ? ';' : ':',
 );
 

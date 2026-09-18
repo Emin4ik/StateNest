@@ -10,7 +10,7 @@ import { style } from './output.js';
  * sees once.
  *
  * Every prompt is non-interactive-safe: without a TTY it returns the default
- * instead of hanging, so `pb init --yes` works in CI and inside a script.
+ * instead of hanging, so `statenest init --yes` works in CI and inside a script.
  */
 
 export interface PromptOptions {
@@ -52,7 +52,7 @@ export async function confirm(
 ): Promise<boolean> {
   // `--yes` means yes. It used to mean "assume the default", which for the
   // prompts that matter - overwriting data, pushing to a remote - defaults to
-  // no, so `pb import --yes` printed "Cancelled. Nothing was changed." and
+  // no, so `statenest import --yes` printed "Cancelled. Nothing was changed." and
   // exited 0. A flag that silently does the opposite of what it says is worse
   // than no flag.
   if (options.assumeYes) return true;
@@ -80,7 +80,7 @@ export interface ChoiceItem {
 /**
  * A numbered checklist.
  *
- * Used where the brief is explicit that Project Brain must show candidates and
+ * Used where the brief is explicit that StateNest must show candidates and
  * let the user choose - importing SSH hosts, picking scan roots - rather than
  * hoovering everything up and asking forgiveness later.
  */

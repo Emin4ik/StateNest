@@ -84,7 +84,7 @@ function measureSessionStart(home, cwd, runs = 15) {
     new Promise((resolveRun) => {
       const started = process.hrtime.bigint();
       const child = spawn('node', [join(ROOT, 'dist-plugin', 'hook.js'), 'session-start'], {
-        env: { ...process.env, PROJECT_BRAIN_HOME: home },
+        env: { ...process.env, STATENEST_HOME: home },
       });
       let out = '';
       child.stdout.on('data', (chunk) => (out += chunk));
@@ -110,7 +110,7 @@ function measureSessionStart(home, cwd, runs = 15) {
 const rows = [];
 const warnings = [];
 
-process.stdout.write('\nProject Brain benchmarks\n');
+process.stdout.write('\nStateNest benchmarks\n');
 
 for (const scale of SCALES) {
   const workspaceDir = await mkdtemp(join(tmpdir(), `pb-bench-${scale}-`));
@@ -202,9 +202,9 @@ const header = [
   'projects',
   'checkpoints',
   'scan',
-  'pb projects',
-  'pb recent',
-  'pb search',
+  'statenest projects',
+  'statenest recent',
+  'statenest search',
   'resume',
   'SessionStart p50',
   'p90',

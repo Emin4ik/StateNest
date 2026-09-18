@@ -1,7 +1,7 @@
 # Architecture
 
-Project Brain is a local-first CLI with adapters. Everything it knows lives in
-plain YAML and Markdown under `~/.project-brain`, and every feature is built on
+StateNest is a local-first CLI with adapters. Everything it knows lives in
+plain YAML and Markdown under `~/.statenest`, and every feature is built on
 a core that has no idea Claude Code exists.
 
 ## Dependency direction
@@ -38,7 +38,7 @@ supported one; it is not the architecture.
 | `src/remotes/` | ssh config parsing |
 | `src/machines/` | Machine identity and OS detection |
 | `src/sync/` | Optional git synchronization of a profile |
-| `src/cli/` | `pb`, and all human-facing output |
+| `src/cli/` | `statenest`, and all human-facing output |
 | `src/mcp/` | MCP server exposing core to coding agents |
 | `src/integrations/claude/` | Hook handlers, session records, plugin installer |
 
@@ -59,7 +59,7 @@ See `src/git/remote-url.ts` and ADR 0002.
 ### 2. A profile is a self-contained, independently syncable directory
 
 ```
-~/.project-brain/
+~/.statenest/
   config.yaml          global settings
   machine.json         THIS computer's id — outside every profile
   profiles/
@@ -116,7 +116,7 @@ carries a message, context lines and **a command that would fix it**. Anything
 else stays an ordinary `Error` with its stack, and is reported as a bug.
 
 Corrupt files are never fatal and never deleted: `Store` collects load issues,
-the command the user asked for still runs, and `pb doctor` reports them.
+the command the user asked for still runs, and `statenest doctor` reports them.
 
 ## Extending it
 

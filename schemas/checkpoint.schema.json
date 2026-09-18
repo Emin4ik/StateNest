@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN/blob/main/schemas/v1/checkpoint.json",
-  "title": "Project Brain checkpoint",
+  "$id": "https://github.com/Emin4ik/StateNest/blob/main/schemas/v1/checkpoint.json",
+  "title": "StateNest checkpoint",
   "description": "The YAML frontmatter of a checkpoint file.",
   "type": "object",
   "properties": {

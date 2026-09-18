@@ -176,7 +176,7 @@ describe('schema migration', () => {
       const workspace = await Workspace.initialize({ home: home.path });
       const registry = new Registry(workspace.store);
 
-      // Exactly what a newer Project Brain might have written into a synced
+      // Exactly what a newer StateNest might have written into a synced
       // profile: unknown fields at the top level, inside a nested object, and
       // inside elements of two different arrays.
       const dir = join(workspace.profilePaths.projectsDir, 'prj_future01');

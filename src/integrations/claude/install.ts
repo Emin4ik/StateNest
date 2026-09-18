@@ -41,14 +41,14 @@ export interface InstallResult {
   pluginDir: string | null;
   marketplaceName: string;
   pluginName: string;
-  /** Commands actually run, so `pb doctor` and the docs can show them. */
+  /** Commands actually run, so `statenest doctor` and the docs can show them. */
   commands: string[];
   /** Human explanation, always safe to print. */
   message: string;
 }
 
-export const MARKETPLACE_NAME = 'project-brain';
-export const PLUGIN_NAME = 'project-brain';
+export const MARKETPLACE_NAME = 'statenest';
+export const PLUGIN_NAME = 'statenest';
 
 /**
  * Locate the plugin root: the directory holding `.claude-plugin/plugin.json`.
@@ -123,7 +123,7 @@ export async function installClaudeIntegration(
       ...base,
       status: 'plugin-dir-not-found',
       message:
-        `Could not find the bundled Claude Code plugin. Reinstall Project Brain with: ${INSTALL_COMMAND}`,
+        `Could not find the bundled Claude Code plugin. Reinstall StateNest with: ${INSTALL_COMMAND}`,
     };
   }
 
@@ -135,7 +135,7 @@ export async function installClaudeIntegration(
       status: 'build-missing',
       pluginDir,
       message:
-        'The plugin is present but not built. Run `npm run build` in the Project Brain ' +
+        'The plugin is present but not built. Run `npm run build` in the StateNest ' +
         `checkout, or install the published package with: ${INSTALL_COMMAND}`,
     };
   }
@@ -146,7 +146,7 @@ export async function installClaudeIntegration(
       status: 'claude-not-found',
       pluginDir,
       message:
-        'Claude Code was not found on the PATH. Install it, then run: pb integrate claude',
+        'Claude Code was not found on the PATH. Install it, then run: statenest integrate claude',
     };
   }
 
@@ -232,7 +232,7 @@ export async function uninstallClaudeIntegration(
     removed: uninstalled.ok,
     commands,
     message: uninstalled.ok
-      ? 'Claude Code integration removed. Your Project Brain data is untouched.'
+      ? 'Claude Code integration removed. Your StateNest data is untouched.'
       : `Could not remove the plugin: ${firstLine(uninstalled.output)}`,
   };
 }
@@ -241,7 +241,7 @@ export async function uninstallClaudeIntegration(
  * Is the plugin currently enabled?
  *
  * Read from `~/.claude/settings.json` rather than by shelling out, because
- * this runs inside `pb doctor` where a 200ms process spawn per check adds up.
+ * this runs inside `statenest doctor` where a 200ms process spawn per check adds up.
  * The file is only ever read here, never written.
  */
 export async function isPluginEnabled(): Promise<boolean> {

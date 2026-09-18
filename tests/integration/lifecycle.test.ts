@@ -429,7 +429,7 @@ describe('project lifecycle', () => {
  *
  * Found in real use: on macOS `/tmp` is a symlink to `/private/tmp`, so the CLI
  * invoked from one and a Claude Code hook invoked from the other registered the
- * same working tree twice on the same machine. `pb resume` then showed the
+ * same working tree twice on the same machine. `statenest resume` then showed the
  * project as if it existed on two computers.
  */
 describe('a directory reached through a symlink is one location', () => {

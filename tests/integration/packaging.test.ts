@@ -74,7 +74,7 @@ describe('the published package', () => {
     const required = [
       // Without the manifest there is no plugin at all.
       '.claude-plugin/plugin.json',
-      // Without the marketplace, `pb integrate claude` cannot register it.
+      // Without the marketplace, `statenest integrate claude` cannot register it.
       '.claude-plugin/marketplace.json',
       // Without this, no hooks fire and no session context is injected.
       'hooks/hooks.json',
@@ -131,8 +131,10 @@ describe('the published package', () => {
 
   it('declares the binaries it promises', async () => {
     // Derived, not hardcoded: renaming the package must not silently leave a
-    // stale command name behind in the manifest.
-    expect(Object.keys(manifest.bin).sort()).toEqual([CLI_COMMAND, PACKAGE_NAME].sort());
+    // stale command name behind in the manifest. Compared as a set, because the
+    // command and the package name are allowed to be the same string - and once
+    // they were, this assertion expected the key twice.
+    expect(new Set(Object.keys(manifest.bin))).toEqual(new Set([CLI_COMMAND, PACKAGE_NAME]));
 
     const files = await packedFiles();
     for (const target of Object.values(manifest.bin)) {

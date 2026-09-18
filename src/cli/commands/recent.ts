@@ -5,7 +5,7 @@ import { buildRecent, type RecentEntry } from '../../core/context.js';
 import { activityBucket, relativeTime } from '../../util/time.js';
 
 /**
- * `pb recent` is the command that makes the whole tool worth installing.
+ * `statenest recent` is the command that makes the whole tool worth installing.
  *
  * It answers "what have I been doing?" in one screen, grouped the way people
  * actually think about time - today, yesterday, last week - rather than as a
@@ -81,7 +81,7 @@ function render(entries: readonly RecentEntry[]): void {
   }
 
   print('');
-  print(style.dim('pb resume <project> to pick one back up'));
+  print(style.dim('statenest resume <project> to pick one back up'));
   print('');
 }
 
@@ -90,7 +90,7 @@ function printEmpty(projectCount: number, options: RecentOptions): void {
   if (projectCount === 0) {
     heading('Nothing recorded yet.');
     print('');
-    print(`  ${style.cyan('pb scan ~/Projects')}   find your projects`);
+    print(`  ${style.cyan('statenest scan ~/Projects')}   find your projects`);
     print('');
     return;
   }
@@ -102,7 +102,7 @@ function printEmpty(projectCount: number, options: RecentOptions): void {
   );
   print('');
   print(style.dim('Activity appears here once you work in a project with Claude Code,'));
-  print(style.dim('or when you run `pb checkpoint` yourself.'));
+  print(style.dim('or when you run `statenest checkpoint` yourself.'));
   print('');
 }
 

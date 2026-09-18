@@ -17,10 +17,10 @@ import {
 import { SCHEMA_ID_BASE } from '../dist/core/metadata.js';
 
 /**
- * Publish JSON Schemas for everything Project Brain writes to disk.
+ * Publish JSON Schemas for everything StateNest writes to disk.
  *
  * The point is that a user's data directory is inspectable and editable
- * without Project Brain. These let an editor validate a hand-edited
+ * without StateNest. These let an editor validate a hand-edited
  * `project.yaml`, and give a contributor a precise reference without reading
  * the zod definitions.
  *
@@ -54,7 +54,7 @@ for (const [name, schema, description] of SCHEMAS) {
   const document = {
     $schema: 'https://json-schema.org/draft/2020-12/schema',
     $id: `${SCHEMA_ID_BASE}/v${SCHEMA_VERSION}/${name}.json`,
-    title: `Project Brain ${name}`,
+    title: `StateNest ${name}`,
     description,
     ...jsonSchema,
   };
@@ -69,14 +69,14 @@ await writeFile(
   [
     '# Data schemas',
     '',
-    `JSON Schema for every record Project Brain writes, generated from the same`,
+    `JSON Schema for every record StateNest writes, generated from the same`,
     'definitions the code validates against — so they cannot drift.',
     '',
     `Schema version: **${SCHEMA_VERSION}**`,
     '',
     'Point your editor at these to get completion and validation when hand-editing',
-    'files under `~/.project-brain`. Every record type is a *loose* object: fields',
-    'written by a newer version of Project Brain are preserved rather than stripped,',
+    'files under `~/.statenest`. Every record type is a *loose* object: fields',
+    'written by a newer version of StateNest are preserved rather than stripped,',
     'so an older machine syncing the same data cannot silently drop them.',
     '',
     ...written.map((file) => `- \`${file}\``),

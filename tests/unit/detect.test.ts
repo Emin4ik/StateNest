@@ -127,7 +127,7 @@ describe('detectProjectMetadata', () => {
 describe('extractFromReadme', () => {
   it('skips the title and badges', () => {
     const readme = [
-      '# Project Brain',
+      '# StateNest',
       '',
       '[![npm](https://img.shields.io/npm/v/x.svg)](https://npm)',
       '<img src="logo.png">',

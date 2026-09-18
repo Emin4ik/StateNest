@@ -14,7 +14,7 @@ import type { ProfilePaths } from '../core/paths.js';
  * Three rules, each of which exists because breaking it would be severe:
  *
  * 1. **Only the profile directory is ever touched.** Every git invocation is
- *    asserted to be inside the Project Brain home before it runs. Project Brain
+ *    asserted to be inside the StateNest home before it runs. StateNest
  *    observes the user's source repositories; it must never commit to one.
  *
  * 2. **A credential blocks the push.** The audit runs before anything leaves
@@ -64,7 +64,7 @@ const COMMIT_TIMEOUT = 30_000;
 const NETWORK_TIMEOUT = 120_000;
 
 /**
- * Guard against ever running git outside the Project Brain home.
+ * Guard against ever running git outside the StateNest home.
  *
  * This is the structural half of "never commit the user's source repository".
  * The other half is that nothing outside this module runs a git write command
@@ -74,10 +74,10 @@ function assertInsideBrainHome(profileRoot: string, brainHome: string): void {
   if (!isPathInside(profileRoot, brainHome)) {
     throw new BrainError(
       'UNSAFE_SYNC_TARGET',
-      'Refusing to run sync outside the Project Brain home.',
+      'Refusing to run sync outside the StateNest home.',
       {
         details: [`Profile: ${profileRoot}`, `Home: ${brainHome}`],
-        hints: ['This is a bug in Project Brain - please report it.'],
+        hints: ['This is a bug in StateNest - please report it.'],
       },
     );
   }
@@ -103,14 +103,14 @@ export class ProfileSync {
    * Turn the profile directory into a git repository pointed at the user's own
    * private remote.
    *
-   * The remote is validated but never contacted here: `pb sync init` must work
+   * The remote is validated but never contacted here: `statenest sync init` must work
    * on a plane.
    */
   async initialise(remoteUrl: string, branch = 'main'): Promise<void> {
     const normalized = normalizeRemoteUrl(remoteUrl);
     if (!normalized) {
       throw new BrainError('INVALID_REMOTE', `"${remoteUrl}" is not a valid git remote.`, {
-        hints: ['pb sync init git@github.com:you/project-brain-data.git'],
+        hints: ['statenest sync init git@github.com:you/statenest-data.git'],
       });
     }
 
@@ -134,8 +134,8 @@ export class ProfileSync {
     }
 
     // Identify commits as the tool, not as whoever happens to be configured.
-    await this.run(['config', 'user.name', 'Project Brain']);
-    await this.run(['config', 'user.email', 'project-brain@localhost']);
+    await this.run(['config', 'user.name', 'StateNest']);
+    await this.run(['config', 'user.email', 'statenest@localhost']);
   }
 
   async status(): Promise<SyncStatus> {
@@ -204,7 +204,7 @@ export class ProfileSync {
         outcome: 'blocked-by-secrets',
         blockers: describeBlock(audit),
         message:
-          'Sync stopped: something in your Project Brain data looks like a credential. Nothing was sent.',
+          'Sync stopped: something in your StateNest data looks like a credential. Nothing was sent.',
       };
     }
 
@@ -306,7 +306,7 @@ export class ProfileSync {
             changed,
             conflicts,
             message:
-              'Two machines changed the same record. Nothing was lost - resolve the files listed, then run `pb sync` again.',
+              'Two machines changed the same record. Nothing was lost - resolve the files listed, then run `statenest sync` again.',
           };
         }
         pulled += behind;
@@ -335,7 +335,7 @@ export class ProfileSync {
           outcome: 'offline',
           pulled,
           changed,
-          message: 'Committed locally, but the remote was unreachable. Run `pb sync` again later.',
+          message: 'Committed locally, but the remote was unreachable. Run `statenest sync` again later.',
         };
       }
       return {
@@ -387,7 +387,7 @@ export class ProfileSync {
 
   private async run(args: string[], timeoutMs = COMMIT_TIMEOUT) {
     // Re-asserted on every invocation, not just in the constructor: this is the
-    // guarantee that Project Brain never writes to a source repository.
+    // guarantee that StateNest never writes to a source repository.
     assertInsideBrainHome(this.cwd, this.brainHome);
     return git(args, { cwd: this.cwd, timeoutMs });
   }

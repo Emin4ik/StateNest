@@ -85,7 +85,7 @@ export function decisionCommand(): Command {
         print(`No decisions recorded for ${project.name}.`);
         print('');
         print(style.dim('Record one:'));
-        print(`  ${style.cyan(`pb decision add "..." --reason "..."`)}`);
+        print(`  ${style.cyan(`statenest decision add "..." --reason "..."`)}`);
         return;
       }
 

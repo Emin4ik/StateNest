@@ -24,7 +24,7 @@ import {
  * Three rules govern this file, and every one of them exists because this code
  * runs inside somebody else's tool:
  *
- * 1. It always exits 0. Project Brain failing must never look like Claude Code
+ * 1. It always exits 0. StateNest failing must never look like Claude Code
  *    failing. A crash here is logged and swallowed.
  *
  * 2. Every handler has a deadline. SessionStart delays the model's first
@@ -32,7 +32,7 @@ import {
  *    1.5 seconds no matter what timeout it declares.
  *
  * 3. Nothing here writes to the user's source repository. It reads git state
- *    and writes only inside the Project Brain home.
+ *    and writes only inside the StateNest home.
  *
  * Checkpoint creation, full git reads and the secret scanner are imported
  * lazily. SessionStart is the only latency-sensitive handler and it needs none
@@ -143,7 +143,7 @@ async function onSessionStart(input: HookInput): Promise<string> {
   if (!project) {
     // An unregistered directory gets no injected context. Interrupting a
     // session to ask about registration would be exactly the kind of nagging
-    // the tool is supposed to avoid; `pb add .` is there when the user wants it.
+    // the tool is supposed to avoid; `statenest add .` is there when the user wants it.
     return '';
   }
 
@@ -413,7 +413,7 @@ async function openWorkspaceQuietly(): Promise<{
     const workspace = await Workspace.open();
     return { workspace, registry: new Registry(workspace.store) };
   } catch {
-    // Project Brain is not set up on this machine, or its home is unreadable.
+    // StateNest is not set up on this machine, or its home is unreadable.
     // Either way, staying silent is correct: the user did not invoke us.
     return null;
   }
@@ -531,9 +531,9 @@ function truncateWords(text: string, maxChars: number): string {
 }
 
 /**
- * Record a hook failure where `pb doctor` can find it.
+ * Record a hook failure where `statenest doctor` can find it.
  *
- * Written to the Project Brain log, never to stderr: stderr from a hook is
+ * Written to the StateNest log, never to stderr: stderr from a hook is
  * shown to the user as an error in Claude Code, and a problem with this plugin
  * is not something the user should have to see mid-session.
  */

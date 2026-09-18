@@ -15,7 +15,7 @@ export interface GitResult {
 /**
  * Environment for every git invocation.
  *
- * Project Brain only ever *reads* repository state, but a stray credential
+ * StateNest only ever *reads* repository state, but a stray credential
  * prompt in a SessionStart hook would hang Claude Code's startup with no
  * visible cause. Disabling every interactive prompt makes that impossible.
  */

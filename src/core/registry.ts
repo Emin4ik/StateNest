@@ -35,7 +35,7 @@ export function deriveProjectId(repo: FastRepoInfo | null): string {
   return randomId('prj', 10);
 }
 
-/** The id a given remote URL would produce. Used by tests and by `pb add`. */
+/** The id a given remote URL would produce. Used by tests and by `statenest add`. */
 export function projectIdForRemote(remoteUrl: string): string | null {
   const normalized = normalizeRemoteUrl(remoteUrl);
   if (!normalized || !normalized.stableAcrossMachines) return null;
@@ -75,7 +75,7 @@ export type IdentityChange = 'gained-remote' | 'remote-changed' | null;
 /**
  * The project registry for one profile.
  *
- * Projects are loaded once per instance and cached: a single `pb` invocation
+ * Projects are loaded once per instance and cached: a single `statenest` invocation
  * reads each project file at most once, which keeps the Claude Code
  * SessionStart path to a handful of milliseconds even with hundreds of
  * projects registered.
@@ -122,7 +122,7 @@ export class Registry {
    * move is attempted in the order that fails safe: if anything goes wrong the
    * project keeps its current id and its recorded repository, which is still
    * correct - just not automatically mergeable with the same repository on
-   * another machine, which `pb doctor` will then point out.
+   * another machine, which `statenest doctor` will then point out.
    */
   private async adoptDerivedId(project: Project, repo: FastRepoInfo): Promise<Project> {
     const derived = deriveProjectId(repo);
@@ -194,7 +194,7 @@ export class Registry {
     }
 
     throw new BrainError('UNKNOWN_PROJECT', `No project matches "${term}".`, {
-      hints: ['pb projects', 'pb add .'],
+      hints: ['statenest projects', 'statenest add .'],
     });
   }
 

@@ -4,15 +4,36 @@ import { datePathSegments, timeFilePrefix, type Timestamp } from '../util/time.j
 import { safeDirName } from '../util/ids.js';
 import { resolveUserPath } from '../util/paths.js';
 
-export const DEFAULT_HOME_DIR_NAME = '.project-brain';
-export const HOME_ENV_VAR = 'PROJECT_BRAIN_HOME';
+export const DEFAULT_HOME_DIR_NAME = '.statenest';
+export const HOME_ENV_VAR = 'STATENEST_HOME';
 
 /**
- * Where Project Brain keeps everything.
+ * The data directory used before the project was named.
+ *
+ * StateNest was developed as "Project Brain" and never published under that
+ * name, so no user has data here - but the author does, and a rename that
+ * silently pretends months of checkpoints do not exist is not acceptable
+ * behaviour from a tool whose entire promise is remembering things.
+ *
+ * Deliberately detection only: found, reported, never read and never moved.
+ * Automatic migration would mean carrying a second directory layout forever to
+ * serve a name nobody else ever used. This is meant to be deleted once the
+ * author has moved their own data.
+ */
+export const LEGACY_HOME_DIR_NAME = '.project-brain';
+
+/** Where the pre-rename data directory would be, for this home. */
+export function legacyHomeDir(env: NodeJS.ProcessEnv = process.env): string {
+  const home = env['HOME'] ?? env['USERPROFILE'] ?? homedir();
+  return join(home, LEGACY_HOME_DIR_NAME);
+}
+
+/**
+ * Where StateNest keeps everything.
  *
  * The layout separates what may be synced from what must never be:
  *
- *   ~/.project-brain/
+ *   ~/.statenest/
  *     config.yaml          global settings
  *     machine.json         THIS computer's id - outside every profile, so it
  *                          can never end up in a data repository
@@ -87,7 +108,7 @@ export function createPaths(homeOverride?: string, env: NodeJS.ProcessEnv = proc
     profilesDir,
     cacheDir,
     logsDir,
-    logFile: join(logsDir, 'project-brain.log'),
+    logFile: join(logsDir, 'statenest.log'),
     backupsDir: join(home, 'backups'),
     cacheFor: (profileName: string) => join(cacheDir, sanitizeProfileName(profileName)),
     profile: (name: string) => createProfilePaths(profilesDir, name),

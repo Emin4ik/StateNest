@@ -12,7 +12,7 @@ export interface DetectedMetadata {
   description: string | null;
   /** Name declared by the project itself, which may differ from the directory. */
   declaredName: string | null;
-  /** Which files the detection actually read, for `pb privacy audit`. */
+  /** Which files the detection actually read, for `statenest privacy audit`. */
   readFiles: string[];
 }
 

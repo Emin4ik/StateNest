@@ -100,14 +100,14 @@ async function main() {
     });
 
     const binDir = process.platform === 'win32' ? prefix : join(prefix, 'bin');
-    const pb = join(binDir, process.platform === 'win32' ? 'pb.cmd' : 'pb');
-    record('installed a `pb` binary', existsSync(pb), pb);
+    const pb = join(binDir, process.platform === 'win32' ? 'pb.cmd' : 'statenest');
+    record('installed a `statenest` binary', existsSync(pb), pb);
 
     // The installed package must not have pulled in anything unexpected.
     const installedRoot = join(
       prefix,
       process.platform === 'win32' ? 'node_modules' : join('lib', 'node_modules'),
-      'project-brain',
+      'statenest',
     );
     record('installed package directory exists', existsSync(installedRoot), installedRoot);
 
@@ -132,7 +132,7 @@ async function main() {
       ...process.env,
       HOME: fakeHome,
       USERPROFILE: fakeHome,
-      PROJECT_BRAIN_HOME: join(fakeHome, '.project-brain'),
+      STATENEST_HOME: join(fakeHome, '.statenest'),
       CLAUDE_CONFIG_DIR: join(fakeHome, '.claude'),
       GIT_CONFIG_GLOBAL: join(fakeHome, '.gitconfig'),
       GIT_CONFIG_SYSTEM: join(fakeHome, '.gitconfig-system'),
@@ -163,10 +163,10 @@ async function main() {
     };
 
     const version = await run(['--version']);
-    record('pb --version', version.ok && version.stdout.trim() === manifest.version, version.stdout.trim());
+    record('statenest --version', version.ok && version.stdout.trim() === manifest.version, version.stdout.trim());
 
     const help = await run(['--help']);
-    record('pb --help lists commands', help.ok && help.stdout.includes('Commands:'));
+    record('statenest --help lists commands', help.ok && help.stdout.includes('Commands:'));
 
     // A fixture project to scan, with a real git repo and a real remote.
     const fixture = join(projects, 'widget');
@@ -180,14 +180,14 @@ async function main() {
     await git(['remote', 'add', 'origin', 'git@github.com:acme/widget.git']);
 
     const init = await run(['init', '--yes', '--no-scan', '--no-claude']);
-    record('pb init', init.ok && /initialised/i.test(init.stdout), firstLine(init.stderr));
+    record('statenest init', init.ok && /initialised/i.test(init.stdout), firstLine(init.stderr));
 
     const scan = await run(['scan', projects]);
-    record('pb scan finds the fixture', scan.ok && /1 new project|already/i.test(scan.stdout), firstLine(scan.stdout));
+    record('statenest scan finds the fixture', scan.ok && /1 new project|already/i.test(scan.stdout), firstLine(scan.stdout));
 
     const list = await run(['projects', '--json']);
     const listed = list.ok ? JSON.parse(list.stdout) : { projects: [] };
-    record('pb projects reports it', listed.projects?.length === 1 && listed.projects[0].name === 'widget');
+    record('statenest projects reports it', listed.projects?.length === 1 && listed.projects[0].name === 'widget');
     record(
       'project identity came from the git remote',
       listed.projects?.[0]?.repository?.identity === 'github.com/acme/widget',
@@ -195,45 +195,45 @@ async function main() {
     );
 
     const checkpoint = await run(['checkpoint', 'widget', '-m', 'Verified the packaged install end to end.'], { cwd: fixture });
-    record('pb checkpoint', checkpoint.ok && /Checkpoint saved/i.test(checkpoint.stdout), firstLine(checkpoint.stderr));
+    record('statenest checkpoint', checkpoint.ok && /Checkpoint saved/i.test(checkpoint.stdout), firstLine(checkpoint.stderr));
 
     const resume = await run(['resume', 'widget']);
-    record('pb resume shows the checkpoint', resume.ok && /widget/.test(resume.stdout));
+    record('statenest resume shows the checkpoint', resume.ok && /widget/.test(resume.stdout));
 
     const recent = await run(['recent']);
-    record('pb recent', recent.ok && /widget/.test(recent.stdout));
+    record('statenest recent', recent.ok && /widget/.test(recent.stdout));
 
     const search = await run(['search', 'packaged']);
-    record('pb search finds the checkpoint text', search.ok && /packaged/i.test(search.stdout));
+    record('statenest search finds the checkpoint text', search.ok && /packaged/i.test(search.stdout));
 
     const where = await run(['where', 'widget']);
-    record('pb where', where.ok && where.stdout.includes(fixture));
+    record('statenest where', where.ok && where.stdout.includes(fixture));
 
     const privacy = await run(['privacy', 'audit']);
-    record('pb privacy audit', privacy.ok && /Nothing sensitive/i.test(privacy.stdout));
+    record('statenest privacy audit', privacy.ok && /Nothing sensitive/i.test(privacy.stdout));
 
     const doctor = await run(['doctor', '--json']);
     const health = doctor.stdout ? JSON.parse(doctor.stdout) : null;
     const failing = health?.checks?.filter((c) => c.level === 'fail') ?? [];
     record(
-      'pb doctor reports no failures',
+      'statenest doctor reports no failures',
       failing.length === 0,
       failing.map((c) => `${c.name}: ${c.detail}`).join('; '),
     );
 
     const migrate = await run(['migrate', '--dry-run', '--json']);
-    record('pb migrate --dry-run', migrate.ok, firstLine(migrate.stderr));
+    record('statenest migrate --dry-run', migrate.ok, firstLine(migrate.stderr));
 
     const exported = join(workspace, 'backup.tar.gz');
     const exportResult = await run(['export', exported]);
-    record('pb export', exportResult.ok && existsSync(exported));
+    record('statenest export', exportResult.ok && existsSync(exported));
 
     // ------------------------------------------------------ no leakage back
     section('Checking the installed binary did not reach into the repository');
 
     // If the installed CLI had resolved the repo's node_modules or source, the
     // only way it could is via a path containing the repo root.
-    const stateDump = await collectText(join(fakeHome, '.project-brain'));
+    const stateDump = await collectText(join(fakeHome, '.statenest'));
     record(
       'no repository path appears in the written data',
       !stateDump.includes(ROOT),
@@ -289,12 +289,12 @@ async function main() {
 
     // ------------------------------------------------ uninstall / reinstall
     section('Uninstall and reinstall, preserving data');
-    await execFileAsync('npm', ['uninstall', '-g', '--prefix', prefix, 'project-brain'], {
+    await execFileAsync('npm', ['uninstall', '-g', '--prefix', prefix, 'statenest'], {
       cwd: workspace,
       maxBuffer: 32 << 20,
     });
     record('uninstall removed the binary', !existsSync(pb));
-    record('the data directory survived uninstall', existsSync(join(fakeHome, '.project-brain')));
+    record('the data directory survived uninstall', existsSync(join(fakeHome, '.statenest')));
 
     await execFileAsync('npm', ['install', '-g', '--prefix', prefix, tarball], {
       cwd: workspace,
@@ -310,7 +310,7 @@ async function main() {
     await rm(workspace, { recursive: true, force: true });
     // Remove the tarball npm pack leaves in the repo root, if any.
     for (const name of await readdir(ROOT)) {
-      if (name.startsWith('project-brain-') && name.endsWith('.tgz')) {
+      if (name.startsWith('statenest-') && name.endsWith('.tgz')) {
         await rm(join(ROOT, name), { force: true });
       }
     }

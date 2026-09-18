@@ -9,9 +9,9 @@ import { runHook } from './handlers.js';
  * directly by tests; this file exists only to turn a process invocation into a
  * function call and back.
  *
- * It always exits 0. Project Brain failing must never look like Claude Code
+ * It always exits 0. StateNest failing must never look like Claude Code
  * failing, so even an unexpected crash here is swallowed - the handlers already
- * log what went wrong where `pb doctor` can find it.
+ * log what went wrong where `statenest doctor` can find it.
  */
 async function main(): Promise<void> {
   const output = await runHook(process.argv[2] ?? '', await readStdin());

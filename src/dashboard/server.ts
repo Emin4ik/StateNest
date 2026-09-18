@@ -68,8 +68,8 @@ export async function startDashboard(
           'On a non-loopback address, anything on your network could read it.',
         ],
         hints: [
-          'pb dashboard                       (serves on 127.0.0.1)',
-          `pb dashboard --host ${host} --yes-expose-me   (if you really mean it)`,
+          'statenest dashboard                       (serves on 127.0.0.1)',
+          `statenest dashboard --host ${host} --yes-expose-me   (if you really mean it)`,
         ],
       },
     );

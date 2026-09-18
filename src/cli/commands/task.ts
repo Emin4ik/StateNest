@@ -136,7 +136,7 @@ async function updateStatus(
   const matches = file.tasks.filter((task) => task.id === idPrefix || task.id.startsWith(idPrefix));
   if (matches.length === 0) {
     throw new BrainError('UNKNOWN_TASK', `No task in ${project.name} matches "${idPrefix}".`, {
-      hints: [`pb task list --project ${project.name}`],
+      hints: [`statenest task list --project ${project.name}`],
     });
   }
   if (matches.length > 1) {

@@ -94,7 +94,7 @@ export function pathKey(path: string, platform = process.platform): string {
  * Without this, one directory can be recorded as two locations. On macOS
  * `/tmp` is a symlink to `/private/tmp`, so a tool invoked from one and a hook
  * invoked from the other register the same working tree twice on the same
- * machine - which then shows up in `pb resume` as if the project existed on
+ * machine - which then shows up in `statenest resume` as if the project existed on
  * two computers.
  *
  * Falls back to the input when the path does not exist or cannot be read: a

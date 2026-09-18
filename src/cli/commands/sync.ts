@@ -44,8 +44,8 @@ export function syncCommand(): Command {
                 : 'It is not a recognisable git URL.',
             ],
             hints: [
-              'pb sync init git@github.com:you/project-brain-data.git',
-              'pb sync init https://github.com/you/project-brain-data.git',
+              'statenest sync init git@github.com:you/statenest-data.git',
+              'statenest sync init https://github.com/you/statenest-data.git',
               'Create the repository first - it must be PRIVATE.',
             ],
           });
@@ -98,7 +98,7 @@ export function syncCommand(): Command {
         success('Sync configured');
         print('');
         print(style.dim('  Nothing has been sent yet. When you are ready:'));
-        print(bullet(style.cyan('pb sync')));
+        print(bullet(style.cyan('statenest sync')));
         print('');
         print(
           style.dim('  Every sync scans your data for credentials first and refuses to send if it finds any.'),
@@ -143,7 +143,7 @@ export function syncCommand(): Command {
         case 'not-configured':
           print('Sync is not set up for this profile.');
           print('');
-          print(bullet(style.cyan('pb sync init git@github.com:you/project-brain-data.git')));
+          print(bullet(style.cyan('statenest sync init git@github.com:you/statenest-data.git')));
           break;
 
         case 'blocked-by-secrets':
@@ -157,7 +157,7 @@ export function syncCommand(): Command {
           }
           print('');
           print(style.dim('  The values above are masked. Remove them, rotate them, then:'));
-          print(bullet(style.cyan('pb privacy audit')));
+          print(bullet(style.cyan('statenest privacy audit')));
           process.exitCode = 1;
           break;
 
@@ -168,7 +168,7 @@ export function syncCommand(): Command {
           print('');
           print(style.dim('  Nothing was lost. Edit the files above to keep what you want, then:'));
           print(bullet(style.cyan('git -C ' + contractHome(workspace.profilePaths.root) + ' rebase --continue')));
-          print(bullet(style.cyan('pb sync')));
+          print(bullet(style.cyan('statenest sync')));
           process.exitCode = 1;
           break;
 
@@ -209,7 +209,7 @@ export function syncCommand(): Command {
       if (!status.initialised) {
         print(`  ${style.dim('not configured')} — everything stays on this machine`);
         print('');
-        print(bullet(style.cyan('pb sync init <private-repo-url>')));
+        print(bullet(style.cyan('statenest sync init <private-repo-url>')));
         print('');
         return;
       }

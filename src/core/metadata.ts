@@ -11,50 +11,34 @@
  * file and treats any remaining placeholder as a release blocker.
  * `scripts/sync-metadata.mjs` propagates a change here into every consumer.
  *
- * ---------------------------------------------------------------------------
- * THESE ARE PLACEHOLDERS, AND THE PACKAGE NAME IS KNOWN TO BE UNUSABLE.
- * See docs/research/project-name.md. Nothing may be published until they are
- * replaced; the check script refuses a release until then.
- * ---------------------------------------------------------------------------
+ * Settled 2026-09-18. `statenest` was verified free on npm, PyPI, Homebrew,
+ * Arch and the AUR, absent from PATH, and unclaimed on GitHub apart from the
+ * owner's own repository: docs/research/final-name-selection.md.
  */
 
-/** Set to false in the same commit that replaces the values below. */
-export const METADATA_IS_PLACEHOLDER = true;
+/** True only while a name and owner have not been chosen. */
+export const METADATA_IS_PLACEHOLDER = false;
+
+/** True only while `PACKAGE_NAME` is known to belong to someone else. */
+export const NAME_IS_KNOWN_TAKEN = false;
+
+export const PACKAGE_NAME = 'statenest';
+export const CLI_COMMAND = 'statenest';
+export const DISPLAY_NAME = 'StateNest';
 
 /**
- * Whether `PACKAGE_NAME` is known to be unavailable.
+ * How a user installs this, as printed in `statenest doctor` fixes and error
+ * hints.
  *
- * Researched 2026-09-18: `project-brain` on npm is an actively maintained
- * product in this same category (v0.30.0, 57 versions, ~914 downloads/week),
- * `getprojectbrain.com` is a paid commercial app using the literal name, and
- * "project brain" has become the generic term competitors use to describe the
- * category. This is not a squat that can be disputed. The full evidence and a
- * ranked set of alternatives are in docs/research/project-name.md.
- */
-export const NAME_IS_KNOWN_TAKEN = true;
-
-export const PACKAGE_NAME = 'project-brain';
-export const CLI_COMMAND = 'pb';
-export const DISPLAY_NAME = 'Project Brain';
-
-/**
- * How a user installs this, as printed in `pb doctor` fixes and error hints.
- *
- * Hardcoding it meant seven user-facing messages told people to run
- * `npm install -g project-brain` — which, since that name belongs to someone
- * else, would install an unrelated package.
+ * Hardcoding it once meant seven user-facing messages named a package that
+ * belonged to someone else. It is derived now, and check-metadata fails if a
+ * literal install command reappears in src/.
  */
 export const INSTALL_COMMAND = `npm install -g ${PACKAGE_NAME}`;
 
-/**
- * GitHub owner and repository.
- *
- * Deliberately not a plausible-looking name. A placeholder that reads like a
- * real URL is the one that survives into a release, and it would point users at
- * a namespace belonging to someone else.
- */
-export const REPOSITORY_OWNER = 'OWNER-NOT-CHOSEN';
-export const REPOSITORY_NAME = 'REPO-NOT-CHOSEN';
+/** GitHub owner and repository. */
+export const REPOSITORY_OWNER = 'Emin4ik';
+export const REPOSITORY_NAME = 'StateNest';
 
 export const REPOSITORY_URL = `https://github.com/${REPOSITORY_OWNER}/${REPOSITORY_NAME}`;
 export const ISSUES_URL = `${REPOSITORY_URL}/issues`;

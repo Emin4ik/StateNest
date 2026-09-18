@@ -15,14 +15,14 @@ body:
       label: What happened
       description: What you did, what you expected, and what actually happened.
       placeholder: |
-        I ran `pb resume taxi` and ...
+        I ran `statenest resume taxi` and ...
     validations:
       required: true
 
   - type: textarea
     id: doctor
     attributes:
-      label: Output of `pb doctor`
+      label: Output of `statenest doctor`
       description: This covers most of what we would otherwise have to ask for.
       render: shell
     validations:
@@ -31,8 +31,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: Project Brain version
-      description: From `pb --version`.
+      label: StateNest version
+      description: From `statenest --version`.
     validations:
       required: true
 
@@ -50,4 +50,4 @@ body:
       label: Does this involve data?
       options:
         - label: Something was lost, corrupted, or written where it should not have been
-        - label: Something was stored that Project Brain says it never stores
+        - label: Something was stored that StateNest says it never stores

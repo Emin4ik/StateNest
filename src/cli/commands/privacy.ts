@@ -5,11 +5,11 @@ import { auditProfile, describeBlock, hasBlockingFindings, totalFindings } from 
 import { contractHome } from '../../util/paths.js';
 
 export function privacyCommand(): Command {
-  const command = new Command('privacy').description('Check what Project Brain is storing');
+  const command = new Command('privacy').description('Check what StateNest is storing');
 
   command
     .command('audit', { isDefault: true })
-    .description('Scan Project Brain\'s own data for anything that looks like a secret')
+    .description('Scan StateNest\'s own data for anything that looks like a secret')
     .option('--all-profiles', 'audit every profile, not just the active one')
     .action(async (options: { allProfiles?: boolean }) => {
       const { workspace } = await openContext();
@@ -86,17 +86,17 @@ export function privacyCommand(): Command {
         print(style.dim('  The values above are masked. To resolve:'));
         print(`    ${style.dim('1.')} open the file named and remove the credential`);
         print(`    ${style.dim('2.')} rotate it, since it has been written to disk`);
-        print(`    ${style.dim('3.')} re-run ${style.cyan('pb privacy audit')}`);
+        print(`    ${style.dim('3.')} re-run ${style.cyan('statenest privacy audit')}`);
         process.exitCode = 1;
       } else {
-        success('Nothing sensitive found in Project Brain\'s data.');
+        success('Nothing sensitive found in StateNest\'s data.');
       }
       print('');
     });
 
   command
     .command('policy')
-    .description('Show exactly what Project Brain does and does not store')
+    .description('Show exactly what StateNest does and does not store')
     .action(async () => {
       const { workspace } = await openContext();
 
@@ -121,13 +121,13 @@ export function privacyCommand(): Command {
             'ssh private keys or passwords',
             'API keys or access tokens',
             'raw AI transcripts',
-            'anything on a Project Brain server (there is none)',
+            'anything on a StateNest server (there is none)',
           ],
         });
       }
 
       print('');
-      heading('What Project Brain stores');
+      heading('What StateNest stores');
       print('');
       for (const item of [
         'project names, descriptions and tags',

@@ -4,7 +4,7 @@
 
 ## Context
 
-Project Brain is a cross-platform CLI that also ships a Claude Code plugin and
+StateNest is a cross-platform CLI that also ships a Claude Code plugin and
 an MCP server, and expects outside contributors.
 
 ## Decision

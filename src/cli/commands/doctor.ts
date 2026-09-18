@@ -30,7 +30,7 @@ interface Check {
 }
 
 /**
- * `pb doctor` has one job: turn "it isn't working" into a command to run.
+ * `statenest doctor` has one job: turn "it isn't working" into a command to run.
  *
  * Every failing check carries a fix. A check that can only say "something is
  * wrong" is not worth having, because the user is no better off than before
@@ -58,7 +58,7 @@ export function doctorCommand(): Command {
       const version = pluginDir
         ? await readPackageVersion(join(pluginDir, 'package.json'))
         : '0.0.0';
-      checks.push({ name: 'Project Brain', level: 'ok', detail: `v${version}` });
+      checks.push({ name: 'StateNest', level: 'ok', detail: `v${version}` });
 
       const git = await gitVersion();
       checks.push({
@@ -76,7 +76,7 @@ export function doctorCommand(): Command {
         name: 'Data directory',
         level: homeExists ? 'ok' : 'fail',
         detail: contractHome(paths.home),
-        ...(homeExists ? {} : { fix: 'pb init' }),
+        ...(homeExists ? {} : { fix: 'statenest init' }),
       });
 
       if (!homeExists) {
@@ -102,7 +102,7 @@ export function doctorCommand(): Command {
           name: 'Active profile',
           level: 'fail',
           detail: error instanceof Error ? error.message : String(error),
-          fix: 'pb profile list',
+          fix: 'statenest profile list',
         });
       }
 
@@ -125,7 +125,7 @@ export function doctorCommand(): Command {
               : `data is v${configVersion}, this build understands v${SCHEMA_VERSION}`,
           ...(configVersion <= SCHEMA_VERSION
             ? {}
-            : { fix: `Update Project Brain: ${INSTALL_COMMAND}@latest` }),
+            : { fix: `Update StateNest: ${INSTALL_COMMAND}@latest` }),
         });
 
         // -- Data integrity ---------------------------------------------------
@@ -158,7 +158,7 @@ export function doctorCommand(): Command {
             missingPaths.length === 0
               ? 'all registered paths exist'
               : `${missingPaths.length} registered path(s) no longer exist`,
-          ...(missingPaths.length === 0 ? {} : { fix: 'pb scan   (re-detects moved projects)' }),
+          ...(missingPaths.length === 0 ? {} : { fix: 'statenest scan   (re-detects moved projects)' }),
         });
 
         const issues = workspace.store.getIssues();
@@ -173,7 +173,7 @@ export function doctorCommand(): Command {
             ? {}
             : {
                 fix:
-                  'Inspect them directly; Project Brain never deletes files it cannot read:\n    ' +
+                  'Inspect them directly; StateNest never deletes files it cannot read:\n    ' +
                   issues
                     .slice(0, 5)
                     .map((issue) => `${contractHome(issue.filePath)} (${issue.reason})`)
@@ -192,7 +192,7 @@ export function doctorCommand(): Command {
               ? `enabled → ${workspace.profile.sync.remote ?? 'no remote set'}`
               : 'enabled in config but the profile is not a git repository'
             : 'disabled (everything stays on this machine)',
-          ...(syncEnabled && !hasGitDir ? { fix: 'pb sync init' } : {}),
+          ...(syncEnabled && !hasGitDir ? { fix: 'statenest sync init' } : {}),
         });
       }
 
@@ -213,7 +213,7 @@ async function claudeChecks(pluginDir: string | null): Promise<Check[]> {
     checks.push({
       name: 'Claude Code',
       level: 'skip',
-      detail: 'not installed — Project Brain works fine without it',
+      detail: 'not installed — StateNest works fine without it',
     });
     return checks;
   }
@@ -253,7 +253,7 @@ async function claudeChecks(pluginDir: string | null): Promise<Check[]> {
     name: 'Plugin enabled',
     level: enabled ? 'ok' : 'warn',
     detail: enabled ? 'enabled in Claude Code' : 'not installed in Claude Code',
-    ...(enabled ? {} : { fix: 'pb integrate claude' }),
+    ...(enabled ? {} : { fix: 'statenest integrate claude' }),
   });
 
   for (const [label, relative] of [
@@ -302,7 +302,7 @@ function report(checks: Check[], options: { repair?: boolean }, workspace: Works
   }
 
   print('');
-  heading('Project Brain doctor');
+  heading('StateNest doctor');
   print('');
 
   for (const check of checks) {

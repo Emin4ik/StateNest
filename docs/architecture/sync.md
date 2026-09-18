@@ -3,19 +3,19 @@
 Optional. Off by default. Everything works forever without it, offline.
 
 ```bash
-pb sync init git@github.com:you/project-brain-data.git   # PRIVATE
-pb sync
-pb sync status
+statenest sync init git@github.com:you/statenest-data.git   # PRIVATE
+statenest sync
+statenest sync status
 ```
 
-Your data, your repository. There is no Project Brain server.
+Your data, your repository. There is no StateNest server.
 
 ## What syncs
 
 One **profile directory**, and nothing else:
 
 ```
-~/.project-brain/profiles/personal/    <- this is the git repository
+~/.statenest/profiles/personal/    <- this is the git repository
 ```
 
 Machine-local and derived state is outside every profile by construction:
@@ -47,7 +47,7 @@ projects/*/decisions.md merge=union
 The `eol=lf` line matters more than it looks: without it, a Windows machine and
 a macOS machine syncing the same profile rewrite every file on every commit.
 
-## What `pb sync` does
+## What `statenest sync` does
 
 1. **Audit.** Scan the whole profile for anything that looks like a credential.
    A finding **stops here** — before a commit exists. Once a secret is in git
@@ -71,17 +71,17 @@ Two machines changed the same record.
 
     projects/prj_t4f8drdzsyxc/project.yaml
 
-Nothing was lost. Resolve the files listed, then run `pb sync` again.
+Nothing was lost. Resolve the files listed, then run `statenest sync` again.
 ```
 
 Nothing is discarded to make a sync succeed. Resolve it as ordinary git:
 
 ```bash
-cd ~/.project-brain/profiles/personal
+cd ~/.statenest/profiles/personal
 git status
 # edit to keep what you want
 git rebase --continue
-pb sync
+statenest sync
 ```
 
 ## Multiple machines
@@ -92,17 +92,17 @@ server, no ids handed out.
 
 ```bash
 # laptop
-pb sync init git@github.com:you/project-brain-data.git && pb sync
+statenest sync init git@github.com:you/statenest-data.git && statenest sync
 
 # workstation
-pb sync init git@github.com:you/project-brain-data.git && pb sync
-pb where taxi     # now shows both machines
+statenest sync init git@github.com:you/statenest-data.git && statenest sync
+statenest where taxi     # now shows both machines
 ```
 
 ## Growth
 
 A checkpoint is roughly 500 bytes. Ten a day for a year is under 2MB of text
-that compresses well. If this ever becomes a problem, `pb export` archives old
+that compresses well. If this ever becomes a problem, `statenest export` archives old
 checkpoints; there is no automatic pruning, because silently deleting a user's
 memory is not something a memory tool should do.
 

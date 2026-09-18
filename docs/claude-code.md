@@ -1,7 +1,7 @@
 # Claude Code integration
 
 ```bash
-pb integrate claude
+statenest integrate claude
 ```
 
 This uses Claude Code's own plugin CLI. It **never edits your
@@ -12,11 +12,11 @@ exact, and nothing you configured yourself is touched.
 To do it by hand:
 
 ```bash
-claude plugin marketplace add "$(npm root -g)/project-brain"
-claude plugin install project-brain@project-brain
+claude plugin marketplace add "$(npm root -g)/statenest"
+claude plugin install statenest@statenest
 ```
 
-Verify with `pb integrate status` or `pb doctor`.
+Verify with `statenest integrate status` or `statenest doctor`.
 
 ## What you get
 
@@ -26,7 +26,7 @@ Open Claude Code inside a registered project and it already knows where you
 left off:
 
 ```
-# Project Brain
+# StateNest
 
 Project: world-war-rts
 Branch: phase-7
@@ -49,19 +49,19 @@ session.
 
 In an **unregistered** directory nothing is injected. That is deliberate:
 interrupting a session to ask about registration is exactly the nagging this
-tool is supposed to remove. Run `pb add .` when you want it.
+tool is supposed to remove. Run `statenest add .` when you want it.
 
 ### Skills
 
 | Skill | For |
 | --- | --- |
-| `/project-brain:resume` | Pick a project back up |
-| `/project-brain:checkpoint` | Record what this session accomplished |
-| `/project-brain:where` | Find a project's copies and servers |
-| `/project-brain:recent` | What you have been working on |
-| `/project-brain:projects` | List or filter projects |
-| `/project-brain:status` | Where everything stands |
-| `/project-brain:doctor` | Diagnose Project Brain itself |
+| `/statenest:resume` | Pick a project back up |
+| `/statenest:checkpoint` | Record what this session accomplished |
+| `/statenest:where` | Find a project's copies and servers |
+| `/statenest:recent` | What you have been working on |
+| `/statenest:projects` | List or filter projects |
+| `/statenest:status` | Where everything stands |
+| `/statenest:doctor` | Diagnose StateNest itself |
 
 ### MCP tools
 
@@ -73,12 +73,12 @@ yesterday?" or "which server runs this?".
 `_add_task`, `_update_state`.
 
 The write tools record **memory** and nothing else. There is no tool that runs
-a shell command or connects to a server — registering a VPS in Project Brain
+a shell command or connects to a server — registering a VPS in StateNest
 deliberately gives a model no way to reach it.
 
 ## What happens automatically
 
-| Event | What Project Brain does | Cost |
+| Event | What StateNest does | Cost |
 | --- | --- | --- |
 | **SessionStart** | Injects the brief | ~116ms, no model |
 | **Stop** | Counts the turn in a local file. Runs async, cannot block. | negligible |
@@ -86,7 +86,7 @@ deliberately gives a model no way to reach it.
 | **PostCompact** | Writes a real checkpoint from the summary Claude Code already generated | **free** |
 | **SessionEnd** | Writes a metadata checkpoint, if the session did anything | no model |
 
-**Project Brain never spawns a model.** Every rich checkpoint reuses work that
+**StateNest never spawns a model.** Every rich checkpoint reuses work that
 has already been done and paid for. There is no API key and no bill.
 
 `PostCompact` is the most valuable of these: Claude Code hands the hook a
@@ -102,7 +102,7 @@ something actually changed — a new commit, a different branch, a changed
 working tree. A session where nothing moved produces no file.
 
 ```yaml
-# ~/.project-brain/config.yaml
+# ~/.statenest/config.yaml
 checkpoint:
   mode: manual-smart      # metadata | smart | manual-smart
   min_interval_minutes: 30
@@ -124,10 +124,10 @@ git process, and the plugin entry points are bundled so Node resolves nothing.
 ## Troubleshooting
 
 **No brief appears.** It only appears in a *registered* project. Check with
-`pb add .`, then start a new session — the brief is injected at session start,
+`statenest add .`, then start a new session — the brief is injected at session start,
 not mid-session.
 
-**`pb doctor` says "Plugin build: compiled output missing".** The plugin was
+**`statenest doctor` says "Plugin build: compiled output missing".** The plugin was
 installed from a source checkout that has not been built. Run `npm run build`
 there, or install the published package.
 
@@ -138,7 +138,7 @@ hooks in an untrusted folder.
 **Something is wrong and you want it gone.**
 
 ```bash
-pb integrate remove claude
+statenest integrate remove claude
 ```
 
 Your data is untouched.

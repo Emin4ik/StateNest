@@ -19,7 +19,7 @@ export function addCommand(): Command {
 
       if (!(await pathExists(path))) {
         throw new BrainError('PATH_NOT_FOUND', `${contractHome(path)} does not exist.`, {
-          hints: ['pb add .', 'pb scan ~/Projects'],
+          hints: ['statenest add .', 'statenest scan ~/Projects'],
         });
       }
 
@@ -57,13 +57,13 @@ export function addCommand(): Command {
         print(
           style.dim(
             '  No git remote found, so this project is identified by a local id.\n' +
-              '  Add a remote and re-run `pb add` to link it across machines.',
+              '  Add a remote and re-run `statenest add` to link it across machines.',
           ),
         );
       }
 
       print('');
-      print(bullet(style.cyan(`pb show ${project.name}`)));
+      print(bullet(style.cyan(`statenest show ${project.name}`)));
     });
 }
 

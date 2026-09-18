@@ -36,7 +36,7 @@ function failure(message: string): TextResult {
  * Open the workspace for one tool call.
  *
  * Not cached: an MCP server lives for the whole session, and the user may run
- * `pb` in a terminal at the same time. Re-reading means the agent sees writes
+ * `statenest` in a terminal at the same time. Re-reading means the agent sees writes
  * made outside the session rather than a snapshot from when it started.
  */
 async function open(): Promise<{ workspace: Workspace; registry: Registry }> {
@@ -63,7 +63,7 @@ function guard<A extends unknown[]>(
         return failure(`${error.message}${error.details.length > 0 ? `\n${error.details.join('\n')}` : ''}${hints}`);
       }
       return failure(
-        `Project Brain could not complete that: ${error instanceof Error ? error.message : String(error)}`,
+        `StateNest could not complete that: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   };
@@ -98,7 +98,7 @@ export function registerTools(server: McpServer): void {
         return text(
           `No registered project at ${contractHome(directory)}.` +
             (repoRoot
-              ? ` A git repository exists at ${contractHome(repoRoot)} but is not registered; the user can run \`pb add .\` to register it.`
+              ? ` A git repository exists at ${contractHome(repoRoot)} but is not registered; the user can run \`statenest add .\` to register it.`
               : ' No git repository was found above it.'),
         );
       }
@@ -301,7 +301,7 @@ export function registerTools(server: McpServer): void {
     {
       title: 'Where a project lives',
       description:
-        'Every place a project exists: local paths on each machine, and every server it is deployed to with ssh alias, deploy path and service name. Addresses only - Project Brain stores no credentials and cannot connect anywhere.',
+        'Every place a project exists: local paths on each machine, and every server it is deployed to with ssh alias, deploy path and service name. Addresses only - StateNest stores no credentials and cannot connect anywhere.',
       inputSchema: { project: z.string().describe('Project name, alias, or id.') },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
@@ -611,7 +611,7 @@ async function currentProjectOrThrow(registry: Registry, machineId: string): Pro
     'This directory is not a registered project, so there is nowhere to record that.',
     {
       details: [`Directory: ${contractHome(process.cwd())}`],
-      hints: ['Ask the user to run `pb add .`, or pass an explicit project name.'],
+      hints: ['Ask the user to run `statenest add .`, or pass an explicit project name.'],
     },
   );
 }

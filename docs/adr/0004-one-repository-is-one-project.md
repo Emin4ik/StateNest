@@ -26,6 +26,6 @@ descending as soon as it finds a repository root.
 - Scanning is dramatically faster: a large monorepo is one `readdir`, not a
   full tree walk.
 - A user who genuinely wants a sub-directory tracked separately can
-  `pb add path/to/subdir`, which registers it explicitly.
+  `statenest add path/to/subdir`, which registers it explicitly.
 - The data model already separates project from location, so adding
   sub-projects later is additive rather than a migration.

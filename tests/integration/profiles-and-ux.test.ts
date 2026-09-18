@@ -32,7 +32,7 @@ describe('profiles can actually be created and listed', () => {
   });
 
   it('creates the profile that was asked for, not "personal"', async () => {
-    // `pb init --profile work` created a profile called "personal": the program
+    // `statenest init --profile work` created a profile called "personal": the program
     // declared a global `--profile` AND the subcommand declared its own, and
     // the global one consumed the value wherever it appeared, leaving the
     // subcommand's copy on its default.
@@ -77,7 +77,7 @@ describe('profiles can actually be created and listed', () => {
 
     const reopened = await Workspace.open({
       home: home.path,
-      env: { ...process.env, PROJECT_BRAIN_PROFILE: 'personal' },
+      env: { ...process.env, STATENEST_PROFILE: 'personal' },
     });
     expect(reopened.profile.name).toBe('personal');
   });

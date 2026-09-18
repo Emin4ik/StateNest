@@ -4,13 +4,13 @@ import { dirname, resolve, sep } from 'node:path';
 /**
  * A tripwire against writing outside an allowed root.
  *
- * Project Brain's test suite creates temporary homes and drives the real code
+ * StateNest's test suite creates temporary homes and drives the real code
  * against them. A single wrong path - a default that resolves to the developer's
- * actual `~/.project-brain`, a fixture that leaks an absolute path - would have
+ * actual `~/.statenest`, a fixture that leaks an absolute path - would have
  * the tests quietly rewriting the author's own data, and the failure would look
  * like a passing test run.
  *
- * Setting `PROJECT_BRAIN_WRITE_ROOT` arms this guard: every atomic write is
+ * Setting `STATENEST_WRITE_ROOT` arms this guard: every atomic write is
  * then checked, and anything outside that root throws before touching the
  * filesystem. It is inert in normal use (one undefined env lookup), so it costs
  * production nothing.
@@ -18,7 +18,7 @@ import { dirname, resolve, sep } from 'node:path';
  * This lives in src rather than in the test helpers deliberately: it has to sit
  * in the write path itself to catch a write the tests did not intend to make.
  */
-const ENV_VAR = 'PROJECT_BRAIN_WRITE_ROOT';
+const ENV_VAR = 'STATENEST_WRITE_ROOT';
 
 export class WriteGuardError extends Error {
   constructor(attempted: string, allowedRoot: string) {

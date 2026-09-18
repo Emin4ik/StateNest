@@ -8,7 +8,7 @@ import { SCHEMA_VERSION } from './schema.js';
  * **Older data** is migrated forward. Each migration is a pure function from
  * one plain object to another, applied in order, and every one of them is
  * additive: a migration may fill in a field it can derive, but it never removes
- * or overwrites something the user wrote. `pb migrate` backs the profile up
+ * or overwrites something the user wrote. `statenest migrate` backs the profile up
  * before rewriting anything.
  *
  * **Newer data** is left completely alone. Every schema is a `z.looseObject`,
@@ -28,7 +28,7 @@ export type RecordKind = 'project' | 'machine' | 'remote' | 'tasks' | 'profile' 
 export interface Migration {
   /** The version this migration produces. */
   to: number;
-  /** Shown by `pb migrate`, so the user can see what will change. */
+  /** Shown by `statenest migrate`, so the user can see what will change. */
   describe: string;
   /** Kinds this applies to. Omit for all. */
   kinds?: RecordKind[];
@@ -38,7 +38,7 @@ export interface Migration {
 /**
  * Migration to schema version 1.
  *
- * This is a real migration, not a placeholder. Project Brain's pre-release
+ * This is a real migration, not a placeholder. StateNest's pre-release
  * builds wrote records before `schema_version` was stamped and before
  * `repository.path` existed, and anyone who used one of those builds has data
  * in exactly this shape.

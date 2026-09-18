@@ -21,7 +21,7 @@ Representative of the category: **Goldfish**, **claude-mem**, **mem0**,
 
 - Hook into the session lifecycle rather than hoping the model calls a tool.
   This is the single most important lesson: *a tool the agent must remember to
-  call will not get called.* Project Brain captures through hooks first and
+  call will not get called.* StateNest captures through hooks first and
   exposes MCP tools second.
 - A small always-loaded index plus detail files read on demand. Our
   ~500-character session brief plus MCP tools for depth is the same shape.
@@ -40,7 +40,7 @@ Representative of the category: **Goldfish**, **claude-mem**, **mem0**,
 | Observed | What we did |
 | --- | --- |
 | Goldfish's README, `package.json` and `plugin.json` all claim MIT, but the repo ships **no LICENSE file** — as published, it is not safely reusable | `LICENSE` exists from the first commit |
-| Requiring a git clone, a specific runtime, and a hardcoded absolute path in every client config | `npm install -g project-brain` then `pb init`; the plugin installs through Claude Code's own CLI |
+| Requiring a git clone, a specific runtime, and a hardcoded absolute path in every client config | `npm install -g statenest` then `statenest init`; the plugin installs through Claude Code's own CLI |
 | Requiring an LLM or embedding API key before anything can be written | Metadata checkpoints need no model at all; rich ones reuse work the agent has already done |
 
 ---
@@ -65,7 +65,7 @@ JetBrains Toolbox, **devpod**.
 
 | Observed | What we did |
 | --- | --- |
-| ghorg's re-run **overwrites local changes** unless `--no-clean` is passed | No Project Brain command ever writes to a source repository. Enforced by a test. |
+| ghorg's re-run **overwrites local changes** unless `--no-clean` is passed | No StateNest command ever writes to a source repository. Enforced by a test. |
 | ghorg's default concurrency of 25 reliably causes "too many open files" | Scanner concurrency defaults to 16 and is bounded everywhere |
 | Every tool surveyed is **single-machine** | Machines are first-class; a project's identity is deliberately independent of its path |
 
@@ -91,7 +91,7 @@ Researched specifically because they change implementation, not architecture.
 
 **Secret detection.** gitleaks, trufflehog and detect-secrets all combine
 high-precision prefix rules with entropy checks, and all struggle with false
-positives on the entropy half. Since Project Brain scans only its *own* short
+positives on the entropy half. Since StateNest scans only its *own* short
 prose output — not arbitrary source trees — we ship a small explicit ruleset
 where a hit is nearly always real, and gate the one broad rule behind an
 entropy threshold. The limits of this are documented for the user in
@@ -99,12 +99,12 @@ entropy threshold. The limits of this are documented for the user in
 
 ---
 
-## 4. Where Project Brain is different
+## 4. Where StateNest is different
 
 Stated plainly, because a new entrant in a crowded category owes the reader
 this:
 
-> Existing tools remember **what the AI learned**. Project Brain remembers
+> Existing tools remember **what the AI learned**. StateNest remembers
 > **where all of your projects live and what operational state they are in** —
 > across every machine you own and every server you deploy to.
 

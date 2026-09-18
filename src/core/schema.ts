@@ -6,7 +6,7 @@ import { z } from 'zod';
  * Two rules govern everything in this file:
  *
  * 1. Every persisted record uses `z.looseObject`, so fields written by a newer
- *    version of Project Brain survive a round-trip through an older one. A
+ *    version of StateNest survive a round-trip through an older one. A
  *    developer syncing one data repo between an up-to-date laptop and a
  *    lagging workstation must never lose data to the older machine rewriting
  *    a file it only partly understands.
@@ -81,7 +81,7 @@ export const EnvironmentSchema = z.enum([
 /**
  * A remote machine the developer deploys to.
  *
- * Authentication is intentionally absent. Project Brain records *which* host a
+ * Authentication is intentionally absent. StateNest records *which* host a
  * project runs on and how it is addressed; connecting to it stays the job of
  * the user's existing SSH configuration and agent. There is no field here that
  * could hold a password or a key, so there is no way for one to be stored,
@@ -116,7 +116,7 @@ export type Remote = z.infer<typeof RemoteSchema>;
 export const ProjectStatusSchema = z.enum(['active', 'paused', 'waiting', 'archived']);
 
 /**
- * Status is always a human decision. Project Brain reports recency separately
+ * Status is always a human decision. StateNest reports recency separately
  * ("active, last touched 42 days ago") rather than silently archiving things
  * on the user's behalf.
  */
@@ -140,7 +140,7 @@ export const RepositorySchema = z.looseObject({
    * Written when a remote changes under an already-recorded project - a
    * repository transferred to a new owner, or moved to a different host. The
    * project keeps its id so its history survives, and the old identity is kept
-   * so `pb doctor` can explain a duplicate that arrives through sync from a
+   * so `statenest doctor` can explain a duplicate that arrives through sync from a
    * machine that only ever saw one of the two.
    */
   previous_identities: z.array(z.string()).default([]),
@@ -200,7 +200,7 @@ export const ProjectSchema = z.looseObject({
   /** Display name. Never identity - projects get renamed. */
   name: z.string().min(1),
   description: z.string().optional(),
-  /** Extra names `pb show <term>` should resolve. */
+  /** Extra names `statenest show <term>` should resolve. */
   aliases: z.array(z.string()).default([]),
   type: ProjectTypeSchema.default('unknown'),
   status: ProjectStatusSchema.default('active'),
@@ -306,7 +306,7 @@ export interface Checkpoint {
   decisions: string[];
   blockers: string[];
   next: string[];
-  /** Absolute path on disk, for diagnostics and `pb doctor`. */
+  /** Absolute path on disk, for diagnostics and `statenest doctor`. */
   filePath: string;
 }
 
@@ -355,7 +355,7 @@ export const ProfileSchema = z.looseObject({
     .min(1)
     .regex(/^[a-z0-9][a-z0-9-]*$/, 'profile names are lowercase, digits and dashes'),
   description: z.string().optional(),
-  /** Directories scanned by `pb scan` when none are given. */
+  /** Directories scanned by `statenest scan` when none are given. */
   project_roots: z.array(z.string()).default([]),
   privacy: PrivacyLevelSchema.default('balanced'),
   sync: SyncConfigSchema.prefault({}),
@@ -413,7 +413,7 @@ export type Config = z.infer<typeof ConfigSchema>;
 // ---------------------------------------------------------------------------
 
 /**
- * Written to `~/.project-brain/machine.json`, outside every profile directory
+ * Written to `~/.statenest/machine.json`, outside every profile directory
  * so it can never be committed to a data repository. It answers exactly one
  * question: which machine is this?
  */

@@ -35,8 +35,8 @@ between its host's protocol and these calls.
 
 The Claude adapter follows all of these, and they were learned the hard way.
 
-**Never fail loudly.** Project Brain breaking must not look like the host tool
-breaking. The hook always exits 0; errors go to the Project Brain log, never to
+**Never fail loudly.** StateNest breaking must not look like the host tool
+breaking. The hook always exits 0; errors go to the StateNest log, never to
 stderr, because stderr from a hook is shown to the user as an error in a tool
 they did not ask to debug.
 
@@ -66,5 +66,5 @@ server does. The write tools record memory — a checkpoint, a decision, a task,
 a focus line.
 
 Do **not** add a tool that executes commands or connects to a registered
-server. Project Brain stores the address of a user's production VPS; that must
+server. StateNest stores the address of a user's production VPS; that must
 not become a way for a model to reach it.

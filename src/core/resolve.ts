@@ -3,9 +3,9 @@ import type { Project } from './schema.js';
 /**
  * Turning what the user typed into the project they meant.
  *
- * `pb show world` should find `world-war-rts` without the user remembering an
+ * `statenest show world` should find `world-war-rts` without the user remembering an
  * id. The rule that makes this safe rather than merely convenient: when a term
- * is genuinely ambiguous, Project Brain asks instead of guessing. Silently
+ * is genuinely ambiguous, StateNest asks instead of guessing. Silently
  * picking one of three projects called `*-api` is how a tool loses trust.
  */
 

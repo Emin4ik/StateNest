@@ -52,8 +52,8 @@ export function checkpointCommand(): Command {
           print(`Nothing to record for ${style.bold(project.name)} — ${verdict.reason}.`);
           print('');
           print(style.dim('Add a summary to record one anyway:'));
-          print(bullet(style.cyan(`pb checkpoint ${project.name} -m "what you did"`)));
-          print(bullet(style.cyan('pb checkpoint --force')));
+          print(bullet(style.cyan(`statenest checkpoint ${project.name} -m "what you did"`)));
+          print(bullet(style.cyan('statenest checkpoint --force')));
           return;
         }
       }
@@ -72,7 +72,7 @@ export function checkpointCommand(): Command {
         { machineId: workspace.machineId, source: 'cli', repo },
       );
 
-      // Keep the project record in step, so `pb projects` sorts correctly
+      // Keep the project record in step, so `statenest projects` sorts correctly
       // without having to read the checkpoint tree.
       await registry.save({
         ...project,
@@ -137,13 +137,13 @@ export async function identifyHere(
   const { project, repoRoot } = await registry.identify(cwd, machineId);
   if (project) return project;
 
-  throw new BrainError('UNKNOWN_PROJECT', 'Project Brain could not identify this project.', {
+  throw new BrainError('UNKNOWN_PROJECT', 'StateNest could not identify this project.', {
     details: [
       `Current directory: ${contractHome(cwd)}`,
       repoRoot
         ? `Git repository found at ${contractHome(repoRoot)}, but it is not registered.`
         : 'No git repository was found above this directory.',
     ],
-    hints: ['pb add .', 'pb checkpoint <project>'],
+    hints: ['statenest add .', 'statenest checkpoint <project>'],
   });
 }

@@ -8,7 +8,7 @@ import { ISSUES_URL, METADATA_IS_PLACEHOLDER } from '../core/metadata.js';
  * Two rules shape everything here:
  *
  * - Human output goes to stdout; diagnostics go to stderr. That is what makes
- *   `pb projects --json | jq` work even while a warning is being printed.
+ *   `statenest projects --json | jq` work even while a warning is being printed.
  *
  * - Nothing is ever truncated silently. When a column is cut, the ellipsis
  *   says so; when a list is capped, the footer says how many were left out.
@@ -101,11 +101,11 @@ export function printError(error: unknown): void {
 
   const message = error instanceof Error ? error.message : String(error);
   process.stderr.write(`\n${paint.red('Unexpected error:')} ${message}\n`);
-  if (error instanceof Error && error.stack && process.env.PROJECT_BRAIN_DEBUG) {
+  if (error instanceof Error && error.stack && process.env.STATENEST_DEBUG) {
     process.stderr.write(`${paint.dim(error.stack)}\n`);
   }
   process.stderr.write(
-    `\n${paint.dim('This is probably a bug. Re-run with PROJECT_BRAIN_DEBUG=1 for a stack trace.')}\n`,
+    `\n${paint.dim('This is probably a bug. Re-run with STATENEST_DEBUG=1 for a stack trace.')}\n`,
   );
   // Before a repository exists there is nowhere to send people. Inventing a URL
   // would send them to a 404, or worse, to a stranger's issue tracker.
@@ -244,7 +244,7 @@ function findLastIndex<T>(items: readonly T[], predicate: (item: T) => boolean):
 // Small building blocks
 // ---------------------------------------------------------------------------
 
-/** `key: value` lines with the keys aligned, used by `pb show`. */
+/** `key: value` lines with the keys aligned, used by `statenest show`. */
 export function renderFields(fields: readonly [string, string][]): string {
   const width = Math.max(0, ...fields.map(([key]) => key.length));
   return fields

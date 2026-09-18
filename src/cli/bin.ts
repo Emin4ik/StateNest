@@ -6,7 +6,7 @@ import { readPackageVersion } from '../core/workspace.js';
 import { printError } from './output.js';
 
 /**
- * `pb` entry point.
+ * `statenest` entry point.
  *
  * Kept deliberately thin: commander is configured in program.ts so it can be
  * exercised by tests without spawning a process.
@@ -18,7 +18,7 @@ async function main(): Promise<void> {
 
   const exitCode = await run(process.argv, version);
   // Set rather than call process.exit(), so buffered stdout is flushed before
-  // the process ends. A piped `pb projects --json | jq` truncates otherwise.
+  // the process ends. A piped `statenest projects --json | jq` truncates otherwise.
   process.exitCode = exitCode;
 }
 

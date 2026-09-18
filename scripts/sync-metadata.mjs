@@ -95,15 +95,41 @@ rewriteJson('.claude-plugin/marketplace.json', (marketplace) => {
 });
 
 // --- prose and code ---------------------------------------------------------
+
+/**
+ * Repository names this project has previously answered to.
+ *
+ * A rename only propagates if the script can recognise what it is replacing.
+ * The first rename left `OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN` sitting in
+ * CONTRIBUTING.md and SECURITY.md, because the pattern only knew the name
+ * before it. Add to this list rather than editing files by hand.
+ */
+const FORMER_REPO_NAMES = ['project-brain', 'REPO-NOT-CHOSEN'];
+const FORMER_OWNERS = ['OWNER-NOT-CHOSEN'];
+
 // Match only a whole repository segment, so a URL like
 // `.../project-brain-data.git` (a user's own sync repo, used as an example)
 // is left alone.
-const STALE_URL = /https:\/\/github\.com\/[\w.-]+\/project-brain(?![\w-])/g;
+const STALE_URLS = [
+  new RegExp(`https://github\\.com/[\\w.-]+/(?:${FORMER_REPO_NAMES.join('|')})(?![\\w-])`, 'g'),
+  new RegExp(`https://github\\.com/(?:${FORMER_OWNERS.join('|')})/[\\w.-]+`, 'g'),
+];
 
-for (const file of ['README.md', 'CONTRIBUTING.md', 'SECURITY.md', 'CHANGELOG.md', 'src/cli/output.ts']) {
+const PROSE_FILES = [
+  'README.md',
+  'CONTRIBUTING.md',
+  'SECURITY.md',
+  'CHANGELOG.md',
+  'src/cli/output.ts',
+];
+
+for (const file of PROSE_FILES) {
   rewriteText(file, [
-    [STALE_URL, REPOSITORY_URL],
+    ...STALE_URLS.map((pattern) => [pattern, REPOSITORY_URL]),
     [/https:\/\/project-brain\.dev\/schemas/g, `${REPOSITORY_URL}/blob/main/schemas`],
+    // `claude plugin install <plugin>@<marketplace>` is prose, not a URL, so
+    // nothing else here would catch it going stale.
+    [/claude plugin install \S+@\S+/g, `claude plugin install ${PACKAGE_NAME}@${PACKAGE_NAME}`],
   ]);
 }
 

@@ -28,7 +28,7 @@ describe('concurrent sessions', () => {
   beforeEach(async () => {
     home = await makeTempDir('pb-conc-home-');
     code = await makeTempDir('pb-conc-code-');
-    process.env.PROJECT_BRAIN_HOME = home.path;
+    process.env.STATENEST_HOME = home.path;
     workspace = await Workspace.initialize({ home: home.path });
   });
 
@@ -392,16 +392,16 @@ describe('concurrent sessions', () => {
   });
 
   describe('degrading gracefully when the environment is broken', () => {
-    it('stays silent when Project Brain is not set up at all', async () => {
+    it('stays silent when StateNest is not set up at all', async () => {
       const elsewhere = await makeTempDir('pb-nohome-');
-      const previous = process.env.PROJECT_BRAIN_HOME;
+      const previous = process.env.STATENEST_HOME;
       try {
-        process.env.PROJECT_BRAIN_HOME = join(elsewhere.path, 'never-created');
+        process.env.STATENEST_HOME = join(elsewhere.path, 'never-created');
         await expect(
           runHook('session-start', payload({ session_id: 'S', cwd: code.path, source: 'startup' })),
         ).resolves.toBe('');
       } finally {
-        process.env.PROJECT_BRAIN_HOME = previous;
+        process.env.STATENEST_HOME = previous;
         await elsewhere.cleanup();
       }
     });
@@ -441,7 +441,7 @@ describe('concurrent sessions', () => {
       }
     });
 
-    it('logs a failure where pb doctor can find it, not to stderr', async () => {
+    it('logs a failure where statenest doctor can find it, not to stderr', async () => {
       const { path } = await project('logged');
       // Make the checkpoint directory unwritable so SessionEnd fails internally.
       await runHook('session-start', payload({ session_id: 'S', cwd: path, source: 'startup' }));

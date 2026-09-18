@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest something Project Brain should do
+description: Suggest something StateNest should do
 labels: [enhancement]
 body:
   - type: textarea

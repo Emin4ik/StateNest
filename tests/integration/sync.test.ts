@@ -229,13 +229,13 @@ describe('profile sync', () => {
     });
   });
 
-  describe('it refuses to operate outside the Project Brain home', () => {
+  describe('it refuses to operate outside the StateNest home', () => {
     it('throws when constructed against a directory outside the home', async () => {
       const { workspace } = await setupProfile(home.path);
       const foreign = { ...workspace.profilePaths, root: code.path };
 
       expect(() => new ProfileSync(foreign, workspace.paths.home)).toThrow(
-        /outside the Project Brain home/i,
+        /outside the StateNest home/i,
       );
     });
 

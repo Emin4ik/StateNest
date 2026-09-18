@@ -14,8 +14,8 @@ import { relativeTime } from '../../util/time.js';
  *
  * Profiles are the mechanism that keeps work and personal data apart, and
  * before this there was no way to create or list one: the only route was
- * `pb init --profile <name>`, and error messages pointed at `pb profile list`
- * and `pb profile create`, neither of which existed. An error that recommends
+ * `statenest init --profile <name>`, and error messages pointed at `statenest profile list`
+ * and `statenest profile create`, neither of which existed. An error that recommends
  * a command that is not there is worse than no error at all.
  */
 export function profileCommand(): Command {
@@ -37,7 +37,7 @@ export function profileCommand(): Command {
         print('');
         print('No profiles yet.');
         print('');
-        print(bullet(style.cyan('pb init')));
+        print(bullet(style.cyan('statenest init')));
         print('');
         return;
       }
@@ -86,7 +86,7 @@ export function profileCommand(): Command {
         ]),
       );
       print('');
-      if (active) print(style.dim(`* active. Use another with: pb --profile <name> <command>`));
+      if (active) print(style.dim(`* active. Use another with: statenest --profile <name> <command>`));
       print('');
     });
 
@@ -101,7 +101,7 @@ export function profileCommand(): Command {
 
       if ((await listProfileNames(paths)).includes(name)) {
         throw new BrainError('PROFILE_EXISTS', `A profile called "${name}" already exists.`, {
-          hints: ['pb profile list', `pb --profile ${name} projects`],
+          hints: ['statenest profile list', `statenest --profile ${name} projects`],
         });
       }
 
@@ -121,12 +121,12 @@ export function profileCommand(): Command {
       print('');
       print(style.dim('  It is completely separate: its own projects, its own sync remote.'));
       print('');
-      print(bullet(style.cyan(`pb --profile ${workspace.profile.name} scan ~/Work`)));
-      print(bullet(style.cyan(`pb --profile ${workspace.profile.name} sync init <private-repo>`)));
+      print(bullet(style.cyan(`statenest --profile ${workspace.profile.name} scan ~/Work`)));
+      print(bullet(style.cyan(`statenest --profile ${workspace.profile.name} sync init <private-repo>`)));
       print('');
       print(
         style.dim(
-          `  To avoid typing --profile every time: export PROJECT_BRAIN_PROFILE=${workspace.profile.name}`,
+          `  To avoid typing --profile every time: export STATENEST_PROFILE=${workspace.profile.name}`,
         ),
       );
       print('');
@@ -144,7 +144,7 @@ export function profileCommand(): Command {
       if (!available.includes(name)) {
         throw new BrainError('UNKNOWN_PROFILE', `No profile called "${name}".`, {
           details: available.length > 0 ? [`Available: ${available.join(', ')}`] : [],
-          hints: [`pb profile create ${name}`, 'pb profile list'],
+          hints: [`statenest profile create ${name}`, 'statenest profile list'],
         });
       }
 
@@ -154,7 +154,7 @@ export function profileCommand(): Command {
       if (wantsJson()) return printJson({ default_profile: name });
       success(`Default profile is now ${style.bold(name)}`);
       print(
-        style.dim('  A PROJECT_BRAIN_PROFILE environment variable still takes precedence over this.'),
+        style.dim('  A STATENEST_PROFILE environment variable still takes precedence over this.'),
       );
     });
 

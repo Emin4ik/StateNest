@@ -17,8 +17,8 @@ Each profile owns a complete directory subtree, and sync operates on exactly
 one of them:
 
 ```
-~/.project-brain/profiles/personal/   <- its own git repo, its own remote
-~/.project-brain/profiles/work/       <- a different repo, a different remote
+~/.statenest/profiles/personal/   <- its own git repo, its own remote
+~/.statenest/profiles/work/       <- a different repo, a different remote
 ```
 
 Machine-local and derived state lives **outside** every profile:

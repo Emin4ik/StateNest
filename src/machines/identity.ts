@@ -10,7 +10,7 @@ export type MachineType = 'laptop' | 'desktop' | 'server' | 'container' | 'vm' |
 /**
  * Which operating system is this, really?
  *
- * WSL is reported by Node as plain `linux`, but it matters for Project Brain:
+ * WSL is reported by Node as plain `linux`, but it matters for StateNest:
  * a repository at `/mnt/c/code/widget` under WSL is the *same working tree* as
  * `C:\code\widget` on the Windows side, and treating the two as separate
  * machines would double-count every project the user has.
@@ -56,7 +56,7 @@ export function isContainer(): boolean {
 }
 
 /**
- * A guess at what kind of machine this is, shown in `pb machine list`.
+ * A guess at what kind of machine this is, shown in `statenest machine list`.
  *
  * Presented as an editable default rather than a fact: the user can correct it,
  * and nothing depends on it being right.
@@ -87,7 +87,7 @@ export function newMachineId(): string {
  * Build the descriptive record for this computer.
  *
  * The id is supplied by the caller because it is generated exactly once, when
- * Project Brain is first initialised here, and then reused forever. Rebuilding
+ * StateNest is first initialised here, and then reused forever. Rebuilding
  * the description on every run is cheap and keeps it accurate after an OS
  * upgrade or a rename.
  */

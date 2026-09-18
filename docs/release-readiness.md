@@ -17,12 +17,12 @@ Nothing may be published while any of these stands.
 
 ### 1. The project name is not available
 
-`project-brain` is taken on npm by an actively maintained product in this same
+`statenest` is taken on npm by an actively maintained product in this same
 category — v0.30.0, 57 versions, ~914 downloads a week, describing itself as a
 "local-first MCP server that gives AI tools semantic memory of your codebase."
 It is not a squat that can be disputed. Separately, `getprojectbrain.com` is a
 paid commercial app using the literal name and marketed at developers, which is
-the profile of a trademark complainant; `Ethan-YS/project-brain` (172★) is a
+the profile of a trademark complainant; `Ethan-YS/statenest` (172★) is a
 direct conceptual competitor under the exact name; and "project brain" has
 become the generic phrase other projects use to describe this category.
 
@@ -59,7 +59,7 @@ of these makes the software unsafe to use.
 ### The display name is not covered by the rename automation
 
 `metadata:sync` rewrites package names, URLs and manifests. It deliberately does
-not rewrite "Project Brain" as it appears in README prose, `docs/`, the CLI
+not rewrite "StateNest" as it appears in README prose, `docs/`, the CLI
 banner and the plugin description — that is a wide, mostly mechanical diff that
 should be done deliberately in one commit once a name is chosen, not smuggled in
 by a script.
@@ -78,7 +78,7 @@ something.
 
 ### Undocumented commands
 
-`pb dashboard`, `pb migrate`, `pb add` and `pb remove` exist, work and are
+`statenest dashboard`, `statenest migrate`, `statenest add` and `statenest remove` exist, work and are
 tested, but are absent from the README's command list. That list is a curated
 subset by design, and `export`/`import` have since been added to it; the rest
 are documented only in `--help`.
@@ -93,7 +93,7 @@ are documented only in `--help`.
   reader must take on trust. An asciinema recording of a real session would do
   more than any paragraph.
 - **Homebrew formula.** `npm install -g` is the only install path today.
-- **Migration test against real pre-release data.** `pb migrate` is tested
+- **Migration test against real pre-release data.** `statenest migrate` is tested
   against synthesised v0 records; nobody has yet migrated a directory that grew
   organically over months.
 
@@ -117,21 +117,21 @@ Everything in this section was executed, not reasoned about.
 | Session-start latency | ~91 ms p50, flat from 10 to 500 projects (`npm run bench`) |
 | Context brief size | 603 bytes |
 | Documentation links | No broken relative links |
-| Test isolation | Full suite run against a snapshot of `~/.claude`, `~/.ssh`, `~/.project-brain`, `~/.gitconfig` and `~/.config/gh`: nothing changed except two files written by the host coding agent itself |
+| Test isolation | Full suite run against a snapshot of `~/.claude`, `~/.ssh`, `~/.statenest`, `~/.gitconfig` and `~/.config/gh`: nothing changed except two files written by the host coding agent itself |
 
 ### Acceptance pass on the packaged artifact
 
 The tarball was installed into a clean prefix with an isolated
-`PROJECT_BRAIN_HOME`, then driven end to end: `init`, `scan`, `projects`,
+`STATENEST_HOME`, then driven end to end: `init`, `scan`, `projects`,
 `checkpoint`, `resume`, `status`, `search`, `doctor`, `export`, `import`. All
 behaved as documented, `doctor` reported every check green, and the resume brief
 correctly surfaced the last session's summary, blockers and next actions. A
-backup written by `pb export` restored into a fresh home with all three projects
+backup written by `statenest export` restored into a fresh home with all three projects
 and their checkpoints intact.
 
 The Claude Code integration was then installed from that packaged artifact into
-an isolated `CLAUDE_CONFIG_DIR`, confirmed active by both `pb integrate status`
-and `pb doctor`, removed with `pb integrate remove claude`, and confirmed gone.
+an isolated `CLAUDE_CONFIG_DIR`, confirmed active by both `statenest integrate status`
+and `statenest doctor`, removed with `statenest integrate remove claude`, and confirmed gone.
 Everything it wrote landed in the isolated directory; the real `~/.claude` was
 untouched, verified by timestamp before and after.
 
@@ -140,14 +140,14 @@ This pass found three defects, all now fixed:
 1. `--yes` meant "assume the default", so on every prompt guarding something
    destructive it cancelled and exited 0.
 2. `CLAUDE_CONFIG_DIR` was ignored when reading Claude Code's state, so
-   `pb doctor` reported on the real `~/.claude` even when pointed elsewhere —
+   `statenest doctor` reported on the real `~/.claude` even when pointed elsewhere —
    and CONTRIBUTING.md's instruction to use a scratch directory did not protect
    anyone who followed it.
-3. Seven user-facing messages hardcoded `npm install -g project-brain`, telling
+3. Seven user-facing messages hardcoded `npm install -g statenest`, telling
    users to install an unrelated package.
 
-Confirmed: no `pb` command writes to `CLAUDE_CONFIG_DIR` as a side effect.
-Registering the plugin is an explicit `pb integrate claude` step and never
+Confirmed: no `statenest` command writes to `CLAUDE_CONFIG_DIR` as a side effect.
+Registering the plugin is an explicit `statenest integrate claude` step and never
 happens during `init`, `scan`, `doctor` or any read command.
 
 ---

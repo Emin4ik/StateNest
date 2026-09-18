@@ -1,13 +1,13 @@
 # Contributing
 
-Thanks for being here. Project Brain is a tool people trust with metadata about
+Thanks for being here. StateNest is a tool people trust with metadata about
 all of their work, so the bar is correctness and clarity over speed.
 
 ## Getting set up
 
 ```bash
-git clone https://github.com/OWNER-NOT-CHOSEN/REPO-NOT-CHOSEN
-cd project-brain
+git clone https://github.com/Emin4ik/StateNest
+cd statenest
 npm ci
 npm run build
 npm test
@@ -23,7 +23,7 @@ node dist/cli/bin.js --help
 testing against your own real data:
 
 ```bash
-export PROJECT_BRAIN_HOME=/tmp/pb-dev
+export STATENEST_HOME=/tmp/pb-dev
 node dist/cli/bin.js init --yes
 ```
 
@@ -72,7 +72,7 @@ user cannot act on is an unfinished error.
 | `src/git/remote-url.ts` | Project identity. A change here can split one project in two across machines, or merge two into one. |
 | `src/storage/` | Data loss lives here. Writes are atomic; keep them that way. |
 | `src/integrations/claude/` | Runs inside someone else's tool. It must never exit non-zero, never block, and never exceed its deadline. |
-| Anything touching a user's repository | Project Brain **reads** source repositories. It must never write to one. There is a test enforcing this; do not skip it. |
+| Anything touching a user's repository | StateNest **reads** source repositories. It must never write to one. There is a test enforcing this; do not skip it. |
 
 ## Architecture rules
 
@@ -92,7 +92,7 @@ not just from the source tree:
 export CLAUDE_CONFIG_DIR=/tmp/claude-test   # never your real ~/.claude
 npm run build
 claude plugin marketplace add "$PWD"
-claude plugin install project-brain@project-brain
+claude plugin install statenest@statenest
 ```
 
 The source tree has `node_modules` beside the code; a real install does not.

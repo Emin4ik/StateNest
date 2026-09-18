@@ -79,11 +79,11 @@ export function migrateCommand(): Command {
         if (future.length > 0) {
           print(
             style.yellow(
-              `  ${pluralize(future.length, 'record')} came from a NEWER version of Project Brain.`,
+              `  ${pluralize(future.length, 'record')} came from a NEWER version of StateNest.`,
             ),
           );
           print(style.dim('  These are left completely untouched, and their extra fields are'));
-          print(style.dim('  preserved. Update Project Brain so it understands them fully:'));
+          print(style.dim('  preserved. Update StateNest so it understands them fully:'));
           print(bullet(style.cyan(`${INSTALL_COMMAND}@latest`)));
           print('');
         }
@@ -147,7 +147,7 @@ export function migrateCommand(): Command {
         success(`Migrated ${pluralize(migrated, 'record')} to schema version ${CURRENT_SCHEMA_VERSION}`);
         print(`  ${style.dim(`backup: ${contractHome(backupRoot)}`)}`);
         print('');
-        print(bullet(style.cyan('pb doctor')));
+        print(bullet(style.cyan('statenest doctor')));
         print('');
       } finally {
         closePrompts();
@@ -200,7 +200,7 @@ async function planProfile(paths: ProfilePaths, profileName: string): Promise<Pr
     try {
       parsed = parseYaml(raw);
     } catch {
-      // Unparseable files are `pb doctor`'s business. A migration must never
+      // Unparseable files are `statenest doctor`'s business. A migration must never
       // try to rewrite something it could not read.
       continue;
     }
