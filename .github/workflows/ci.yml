@@ -50,19 +50,40 @@ jobs:
           node dist/cli/bin.js --help > /dev/null
 
       - name: Verify the plugin entry points have no runtime dependencies
-        shell: bash
+        # Node rather than shell: `mktemp -d` under Git Bash on Windows returns
+        # a path the native node.exe cannot resolve, which fails for a reason
+        # that has nothing to do with the bundle.
         run: |
-          # The plugin root has no node_modules when Claude Code loads it in
-          # place, so the bundles must resolve nothing. Run them from a
-          # directory with no node_modules above it to prove it.
-          TMP="$(mktemp -d)"
-          cp -r dist-plugin "$TMP/"
-          echo '{}' | node "$TMP/dist-plugin/hook.js" session-start
-          echo "hook ran with no dependencies available"
+          node -e "
+            const fs = require('node:fs');
+            const os = require('node:os');
+            const path = require('node:path');
+            const { execFileSync } = require('node:child_process');
+            const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'plugin-isolated-'));
+            fs.cpSync('dist-plugin', path.join(tmp, 'dist-plugin'), { recursive: true });
+            const out = execFileSync(process.execPath,
+              [path.join(tmp, 'dist-plugin', 'hook.js'), 'session-start'],
+              { cwd: tmp, input: '{}', encoding: 'utf8' });
+            if (out.trim() !== '') throw new Error('unexpected output: ' + out);
+            console.log('hook ran with no dependencies available');
+          "
 
+  # Part F: the real tarball, installed and driven on every supported OS.
+  #
+  # Running the suite from a checkout proves the code works; it does not prove
+  # the thing users install works. The global bin layout alone differs —
+  # POSIX puts the shim in `<prefix>/bin`, Windows puts it in `<prefix>` — so
+  # this is a Node script rather than shell, because encoding those
+  # differences in YAML is how a workflow passes on one runner and lies on
+  # another.
   package:
-    name: Package
-    runs-on: ubuntu-latest
+    name: Package / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -73,20 +94,15 @@ jobs:
       - run: npm ci
       - run: npm run build
 
-      - name: Pack and inspect the tarball
-        run: |
-          npm pack --dry-run
-          npm pack
-          tar -tzf statenest-*.tgz | sort
+      - name: Inspect the tarball contents
+        shell: bash
+        run: npm pack --dry-run
 
-      - name: Install the packed tarball into a clean prefix
-        run: |
-          PREFIX="$(mktemp -d)"
-          npm install -g --prefix "$PREFIX" ./statenest-*.tgz
-          "$PREFIX/bin/pb" --version
-          "$PREFIX/bin/pb" doctor || true
+      - name: Install the packed tarball and drive the CLI
+        run: npm run smoke:install
 
       - name: Validate the Claude Code plugin manifest
+        shell: bash
         run: |
           node -e "
             const fs = require('node:fs');

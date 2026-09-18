@@ -1,0 +1,17 @@
+# Keep the working tree byte-identical on every platform.
+#
+# Without this, git's core.autocrlf rewrites text files on Windows checkout,
+# and the suite then compares fixtures it wrote with LF against files checked
+# out with CRLF. The product itself normalises line endings when it parses
+# (see tests/unit/line-endings.test.ts), but the repository should not be the
+# thing introducing the variation.
+* text=auto eol=lf
+
+# Shell scripts must keep LF even on Windows: CRLF makes a shebang unusable.
+*.sh text eol=lf
+
+# Binary-ish artifacts git should never touch.
+*.png binary
+*.jpg binary
+*.gif binary
+*.tgz binary
