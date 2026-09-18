@@ -12,13 +12,20 @@ const execFileAsync = promisify(execFile);
 const ROOT = join(import.meta.dirname, '..', '..');
 
 /**
- * On Windows the npm CLI is `npm.cmd`.
+ * Running npm from Node on Windows.
  *
- * `execFile` resolves an exact filename and does not try PATHEXT, so plain
- * `npm` fails with ENOENT there. Naming the file beats passing `shell: true`,
- * which would join argv into one string without quoting.
+ * Two constraints collide. Plain `npm` fails with ENOENT, because `execFile`
+ * resolves an exact filename and does not consult PATHEXT. Naming `npm.cmd`
+ * instead fails with EINVAL, because since the fix for CVE-2024-27980 Node
+ * refuses to spawn a `.cmd` without a shell. So a shell it is.
+ *
+ * That is safe *here* and only here: every argument below is a fixed literal
+ * with no spaces. `shell: true` joins argv into one string without quoting, so
+ * anything carrying user text must not go through it — which is why
+ * scripts/smoke-install.mjs runs the CLI's entry point directly instead.
  */
-const NPM = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const NPM = 'npm';
+const NPM_SPAWN = { shell: process.platform === 'win32' } as const;
 
 /**
  * Every test here spawns a process — `npm pack`, or node running a bundle.
@@ -65,11 +72,11 @@ function packedFiles(): Promise<string[]> {
   // `--ignore-scripts` skips prepack: the suite already built, and running a
   // full rebuild inside every assertion is slow and makes the listing depend
   // on build output reaching stdout.
-  packedFilesPromise ??= execFileAsync(
-    NPM,
-    ['pack', '--dry-run', '--json', '--ignore-scripts'],
-    { cwd: ROOT, maxBuffer: 32 * 1024 * 1024 },
-  ).then(({ stdout }) => {
+  packedFilesPromise ??= execFileAsync(NPM, ['pack', '--dry-run', '--json', '--ignore-scripts'], {
+    cwd: ROOT,
+    maxBuffer: 32 * 1024 * 1024,
+    ...NPM_SPAWN,
+  }).then(({ stdout }) => {
     const report = JSON.parse(stdout) as { files: { path: string }[] }[];
     return report[0]!.files.map((file) => file.path);
   });
@@ -94,7 +101,7 @@ beforeAll(async () => {
   await execFileAsync(NPM, ['run', 'build'], {
     cwd: ROOT,
     maxBuffer: 64 * 1024 * 1024,
-    shell: process.platform === 'win32',
+    ...NPM_SPAWN,
   });
 
   for (const file of built) {
