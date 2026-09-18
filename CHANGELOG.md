@@ -8,6 +8,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Until 1.0.0, the on-disk data format may change between minor versions.
 Migrations are provided and are never destructive: see `docs/data-model.md`.
 
+## [0.2.1] — 2026-09-19
+
+Three fixes found while verifying v0.2.0 against real machines, plus repository
+polish. No workflow changes: everything automatic in 0.2.0 stays automatic, and
+nothing on disk changes.
+
+### Fixed
+
+- **A machine joining an existing profile now appears as a project location
+  after its first session.** Its first sync adopts the remote history and
+  materialises the remote files over the top, which is right for shared state —
+  but it was also overwriting the project record that session had just written,
+  and with it the discovery that the project lives on this machine too. The
+  location previously appeared only from the second session onwards. Adoption
+  now carries this machine's own locations across, and nothing else: the remote
+  stays authoritative about every other field, and a location cannot conflict
+  because it is keyed by machine and path.
+- **`Next:`, `Blocked:` and decision bullets from a compaction summary are
+  filed correctly.** The condenser chose a bucket from the last heading it saw
+  and applied it to every bullet beneath, so a summary written as a flat list of
+  self-labelled bullets — which Claude Code often produces — put everything
+  under "Recently completed". A resume brief could therefore claim you had
+  finished the thing that was blocking you. A bullet that names its own category
+  is now believed over the heading above it. Ordinary prose containing a colon
+  is untouched; nothing is inferred from a sentence.
+- **A `## Blockers` heading is recognised.** The pattern matched only the
+  singular, so the plural classified as nothing at all and its bullets stayed in
+  whichever bucket preceded them.
+- **Sync conflicts name the record, not its id.** The first notice said
+  `prj_57dh4nhah58x — current state`; it now says `harbour — current state`,
+  the same wording `statenest sync repair` already used. Two projects sharing a
+  display name are qualified by repository path. A name that genuinely cannot be
+  resolved falls back to the id.
+- The background sync process is passed its home and profile explicitly, so a
+  run scoped to a non-default home can no longer resolve the default one.
+
+### Added
+
+- An architecture test enforcing the documented dependency direction: `core`,
+  `storage`, `sync`, `checkpoints`, `git`, `discovery` and `security` must not
+  import an agent integration. The rule was stated publicly and checked by
+  nothing.
+- `npm run demo:zero-touch` — a reproducible two-machine demonstration that
+  drives the real hook processes and the real background sync against throwaway
+  homes. It prints no output of its own. `scripts/recording/zero-touch.tape`
+  regenerates a GIF with VHS; no binary is committed.
+- [`AGENTS.md`](AGENTS.md), for coding agents working on StateNest: the
+  data-safety invariants, the commands, and the rule that tests always use an
+  isolated `STATENEST_HOME`.
+- [`llms.txt`](llms.txt), a curated entry point for agents reading the
+  repository.
+- [Compatibility](docs/compatibility.md), separating tested from supported from
+  untested, and [project status](docs/project-status.md), mapping each
+  capability to the tests covering it.
+- [Positioning](docs/positioning.md) and [demo script](docs/demo-script.md).
+
+### Changed
+
+- The README now leads with what StateNest is and the zero-touch workflow. The
+  CLI is presented as inspection and control tooling rather than the product.
+
 ## [0.2.0] — 2026-09-18
 
 StateNest stops needing to be operated. Installing it and opening Claude Code in

@@ -1,7 +1,7 @@
 {
   "name": "statenest",
   "description": "Local-first memory for your projects. Recognises the repository you open Claude Code in, restores your previous context at session start, records what the session achieved, and syncs it to your other machines.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": {
     "name": "StateNest contributors"
   },

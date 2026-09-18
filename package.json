@@ -1,6 +1,6 @@
 {
   "name": "statenest",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A local-first memory and control layer for coding agents. Recognises the git repository you open your agent in, restores what you were doing, records what the session achieved, and syncs it across your machines through a private git repository you own.",
   "keywords": [
     "coding-agent",
